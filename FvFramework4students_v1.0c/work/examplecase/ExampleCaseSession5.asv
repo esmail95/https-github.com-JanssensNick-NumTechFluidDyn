@@ -26,8 +26,8 @@ clc
 
 % Create a mesh
 % Orthogonal mesh
-nCx = 10;
-nCy = 10;
+nCx = 100;
+nCy = 100;
 Lx = 1;
 Ly = 1;
 seedI = LineSeed.lineSeedOneWayBias([0 0],[Lx 0],nCx,1.00,'o'); 
@@ -50,12 +50,11 @@ set(U,[uValueX*ones(1,U.elcountzone);uValueY*ones(1,U.elcountzone)]);
 %reset(U,[1;0.2]);
 
 % MMS solution
-U_sol = Field(casedef.dom.allCells,1);     % Velocity [m/s] (vector);
 MMS_case = 'example';
 switch MMS_case
    case 'example'
-      U_chosen = @(x,y) [x.^2;y.^2];  % Imposed pressure field
-      set(U_sol,U_chosen(casedef.dom.cCoord(1,:),casedef.dom.cCoord(2,:)));
+      U_chosen = @(x,y) [x^2;y^2];  % Imposed pressure field
+      set(U_sol,
 end
 
 % Define material properties
