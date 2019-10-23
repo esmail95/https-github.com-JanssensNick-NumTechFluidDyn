@@ -12,8 +12,8 @@ function plotSection(cCoord,result,indices,xy,LineWidth)
         end
     else
         for k = indices
-            x(cntr) = cCoord(2,k);
-            y(cntr) = result(k);
+            y(cntr) = cCoord(2,k);
+            x(cntr) = result(k);
             cntr = cntr + 1;
         end
     end 

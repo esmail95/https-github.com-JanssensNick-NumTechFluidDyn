@@ -14,8 +14,9 @@ dom = casedef.dom;
 
 % Create field objects
 U = Field(dom.allCells,1);      % Velocity field [m/s]
+U_old = Field(dom.allCells,1); 
 set(U,casedef.vars.U.data);
-
+set(U_old,casedef.vars.U.data);
 %U = Field(dom.allCells,0);      % Velocity in x [m/s]
 %V = Field(dom.allCells,0);      % Velocity in y [m/s]
 %reset(U,0);
@@ -62,13 +63,17 @@ dt = casedef.iteration.dt;
 fXiLamba = dom.fXiLambda;
 
 % Create an equation object for holding a scalar conservation equation
-%eqn = ScalarFvEqn2(dom);
 eqn_u = ScalarFvEqn2(dom);
 eqn_v = ScalarFvEqn2(dom);
 time = -dt;
+stepping = true;
 
 iterate = true;
 niter = 0;
+
+while stepping
+    time = time + dt;
+
 while iterate  
    % Initialise matrics:
    % - Au = [apu ; aNbIntu ; aNbBoundu]
@@ -83,17 +88,15 @@ while iterate
    bv = zeros(nC,1);
    
    % Update iteration counter
-   niter = niter+1
-   time = time + dt;
+   niter = niter+1;
    
    % Set all terms to zero
    reset(eqn_u);
    reset(eqn_v);
-   
    % Compute coefficients for physical cell eqns and add them to eqn object
    for i = 1:nPc
-      Ui = U.data(1,i); % Current u
-      Vi = U.data(2,i); % Current v
+      Ui = U_old.data(1,i); % Current u
+      Vi = U_old.data(2,i); % Current v
       apu(i) = apu(i) + cVol(i)/dt;
       apv(i) = apv(i) + cVol(i)/dt;
       bu(i) = bu(i) - cVol(i)*dPx/rho + cVol(i)*Ui/dt;
@@ -105,10 +108,10 @@ while iterate
       l = fXiLamba(i);
       Af = fArea(i);
       Xif = norm(Xi(:,i));
-      U1 = U.data(:,nb1);
-      U2 = U.data(:,nb2);
+      U1 = U_old.data(:,nb1);
+      U2 = U_old.data(:,nb2);
       Uf = l*U1 + (1-l)*U2;
-      Unf = dot(Uf,fNormal(:,i)); 
+      Unf = dot(Uf,fNormal(:,i));
       %%% Compute sign of the normal
       diff = cCoord(:,nb2)-cCoord(:,nb1);
       outw = sign(dot(diff,fNormal(:,i)));
@@ -133,8 +136,8 @@ while iterate
       l = fXiLamba(i + nIf);
       Af = fArea(i + nIf);
       Xif = norm(Xi(:,i + nIf));
-      U1 = U.data(:,nb1);
-      U2 = U.data(:,nb2);
+      U1 = U_old.data(:,nb1);
+      U2 = U_old.data(:,nb2);
       Uf = l*U1 + (1-l)*U2;
       Unf = dot(Uf,fNormal(:,i + nIf));
       %%%
@@ -221,7 +224,7 @@ while iterate
    xv = x(2,:);
    xu = xu';
    xv = xv';
-%    [Au,bu] = to_msparse(eqn_u);
+    %[Au,bu] = to_msparse(eqn_u);
 %    AA = full(Au);
 %    save('AA')
 %    save('bu')
@@ -240,10 +243,10 @@ while iterate
    VResnorm = norm(VRes);
    Resnorm = max(UResnorm,VResnorm);      
    if Resnorm < casedef.iteration.TTol
-      converged = true;
+      %converged = true;
       iterate = false;
    elseif niter > casedef.iteration.maxniter
-      converged = false;
+      %converged = false;
       iterate = false;
 %    elseif checkstoprequest(stopmon)
 %       converged = false;
@@ -255,13 +258,21 @@ while iterate
       x = [Au\bu,Av\bv];
       set(U,x'); % Put algebraic solution in the Field
    end
-      
-   
 end % iterate
+if max(norm(U.data(1,:)-U_old.data(1,:)),norm(U.data(2,:)-U_old.data(2,:))) < casedef.iteration.TTol
+    stepping = false;
+else
+    stepping = true;
+    set(U_old,U.data);
+end
+
+
+end % stepping
 
 result.endtime = now; % call datestr(now) for displaying this time 
-result.converged = converged;
-result.niter = niter;
+result.converged = 1-stepping;
+%result.niter = niter;
+result.steps = time/50;
 result.UResnorm = UResnorm;
 result.URes = Field(dom.allCells,0);
    set(result.URes,URes');
@@ -269,6 +280,7 @@ result.VResnorm = VResnorm;
 result.VRes = Field(dom.allCells,0);
    set(result.VRes,VRes');
 result.U = U;
+result.time = time;
 end
 
 
