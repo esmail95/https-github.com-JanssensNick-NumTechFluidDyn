@@ -28,15 +28,21 @@ clc
 % Orthogonal mesh
 nCx = 100;
 nCy = 100;
+x2 = [1,1];
+y2 = [-1,1];
 Lx = 1;
 Ly = 1;
-seedI = LineSeed.lineSeedOneWayBias([0 0],[Lx 0],nCx,1.00,'o'); 
-seedJ = LineSeed.lineSeedOneWayBias([0 0],[0 Ly],nCy,1.00,'o'); 
+seedI = LineSeed.lineSeedOneWayBias([0 0],x2,nCx,Lx,'o'); 
+seedJ = LineSeed.lineSeedOneWayBias([0 0],y2,nCy,Ly,'o'); 
 casedef.boundarynames = {'WESTRAND','OOSTRAND','ZUIDRAND','NOORDRAND'};
 mesh  = TwoSeedMesher.genmesh(seedI,seedJ,casedef.boundarynames);
 % Create domain from mesh
 casedef.dom = newdomain(mesh,'MyDomain');
 
+sinTheta = x2(2)/sqrt(x2(1)^2+x2(2)^2);
+cosTheta = x2(1)/sqrt(x2(1)^2+x2(2)^2);
+casedef.vars.sinTheta = sinTheta;
+casedef.vars.cosTheta = cosTheta;
 dX = seedI.displX;
 dY = seedJ.displY;
 casedef.vars.dX = dX;

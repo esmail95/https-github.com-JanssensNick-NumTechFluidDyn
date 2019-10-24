@@ -8,7 +8,7 @@
 % by Frederik Rogiers
 %
 %==========================================================================
-function result = examplesolver4(casedef)
+function result = examplesolver5(casedef)
 
 dom = casedef.dom;
 
@@ -49,15 +49,15 @@ for i = 1:nbZones
     ranges(:,i) = boundary.range;
 end
 
-dX = casedef.vars.dX;
-dY = casedef.vars.dY;
-cos = casedef.vars.cosTheta;
-sin = casedef.vars.sinTheta;
-pIn = casedef.vars.pIn;
-pOut = casedef.vars.pOut;
-dPx = (pIn-pOut)/dX;
-dPy = (pIn-pOut)/dY;
-dPy = 0;
+%dX = casedef.vars.dX;
+%dY = casedef.vars.dY;
+%pIn = casedef.vars.pIn;
+%pOut = casedef.vars.pOut;
+%dPx = (pIn-pOut)/dX;
+%dPy = (pIn-pOut)/dY;
+%dPy = 0;
+Source = casedef.vars.Source;
+
 
 dt = casedef.iteration.dt;
 
@@ -101,8 +101,11 @@ while iterate
       Vi = U_old.data(2,i); % Current v
       apu(i) = apu(i) + cVol(i)/dt;
       apv(i) = apv(i) + cVol(i)/dt;
-      bu(i) = bu(i) - cVol(i)*dPx/rho + cVol(i)*Ui/dt;
-      bv(i) = bv(i) - cVol(i)*dPy/rho + cVol(i)*Vi/dt;
+      %bu(i) = bu(i) - cVol(i)*dPx/rho + cVol(i)*Ui/dt;
+      %bv(i) = bv(i) - cVol(i)*dPy/rho + cVol(i)*Vi/dt;
+      S = Source(cCoord(1,i),cCoord(2,i));
+      bu(i) = bu(i) + cVol(i)*S(1) + cVol(i)*Ui/dt; % Don't forget multiplication with cVol (sorce is integrated over cell volume)
+      bv(i) = bv(i) + cVol(i)*S(2) + cVol(i)*Vi/dt;
    end
    for i = 1:nIf
       nb1 = fNbC(2*i-1);
@@ -133,6 +136,8 @@ while iterate
    end
    % Compute coefficients for ghost cell eqns and add them to eqn object
    for i = 1:nBf
+      fCx = fCoord(1,i + nIf);
+      fCy = fCoord(2,i + nIf);
       nb1 = fNbC(2*i-1 + 2*nIf); % Physicl cell
       nb2 = fNbC(2*i + 2*nIf); % Ghost Cell
       l = fXiLamba(i + nIf);
@@ -164,8 +169,8 @@ while iterate
                     aNbBoundu(2*i-1) = aNbBoundu(2*i-1) + outw*(1-l)*Unf*Af + k*Af/Xif;
                     
                     % Forcing terms
-                    phi_star = BC{j}.data.bcval_u;
-                    bu(nb2) = phi_star;
+                    phi_star = BC{j}.data.bcval_u(fCx,fCy);
+                    bu(nb2) = phi_star(1);
                     
                     % Diagonal elements from BC: ghost cell
                     apv(nb2) = l;
@@ -178,8 +183,8 @@ while iterate
                     aNbBoundv(2*i-1) = aNbBoundv(2*i-1) + outw*(1-l)*Unf*Af + k*Af/Xif;
                     
                     % Forcing terms
-                    phi_star = BC{j}.data.bcval_v; 
-                    bv(nb2) = phi_star;
+                    phi_star = BC{j}.data.bcval_v(fCx,fCy); 
+                    bv(nb2) = phi_star(2);
                 case 'Neumann'
                     % (phi(PC)-phi(GC))/Ef=phi*
                     % Diagonal elements from BC: ghost cell

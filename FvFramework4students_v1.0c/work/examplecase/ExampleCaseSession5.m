@@ -49,57 +49,69 @@ U = Field(casedef.dom.allCells,1);     % Velocity [m/s] (vector);
 set(U,[uValueX*ones(1,U.elcountzone);uValueY*ones(1,U.elcountzone)]);
 %reset(U,[1;0.2]);
 
-% MMS solution
-U_sol = Field(casedef.dom.allCells,1);     % Velocity [m/s] (vector);
-MMS_case = 'example';
-switch MMS_case
-   case 'example'
-      U_chosen = @(x,y) [x.^2;y.^2];  % Imposed pressure field
-      set(U_sol,U_chosen(casedef.dom.cCoord(1,:),casedef.dom.cCoord(2,:)));
-end
-
 % Define material properties
-casedef.material.k = 0.1; % Thermal conductivity [W/(m K)]
-casedef.material.rho = 1; % density [kg/m^3]
+k = 0.1;
+rho = 1;
+casedef.material.k = k; % Thermal conductivity [W/(m K)]
+casedef.material.rho = rho; % density [kg/m^3]
 
 casedef.vars.U = U;
 casedef.vars.pIn = 100;
 casedef.vars.pOut = 0;
 
+% MMS solution
+U_sol = Field(casedef.dom.allCells,1);     % Velocity [m/s] (vector);
+U_diff = Field(casedef.dom.allCells,1);
+MMS_case = 'example';
+switch MMS_case
+   case 'example'
+      U_chosen = @(x,y) [x.^2;-y.^2];  % Imposed pressure field
+      set(U_sol,U_chosen(casedef.dom.cCoord(1,:),casedef.dom.cCoord(2,:)));
+      set(U_diff,U_chosen(casedef.dom.cCoord(1,:),casedef.dom.cCoord(2,:))); 
+      % Derivation in slides is wrong, k must be included
+      Source =@(x,y) [4*x.^3 - 2*x.^2.*y - 2*k ; -2*x.*y.^2 + 4*y.^3 + 2*k]; % Analytically computed source term
+      casedef.vars.Source = Source;
+end
+
 % Define boundary conditions: for u and v
-jBC = 0;
-jBC = jBC+1;
-casedef.BC{jBC}.zoneID = 'WESTRAND';
-casedef.BC{jBC}.kind_u   = 'Neumann';
-casedef.BC{jBC}.data.bcval_u = 0;
-casedef.BC{jBC}.kind_v   = 'Neumann';
-casedef.BC{jBC}.data.bcval_v = 0;
-jBC = jBC+1;
-casedef.BC{jBC}.zoneID = 'OOSTRAND';
-casedef.BC{jBC}.kind_u   = 'Neumann';
-casedef.BC{jBC}.data.bcval_u = 0;
-casedef.BC{jBC}.kind_v   = 'Neumann';
-casedef.BC{jBC}.data.bcval_v = 0;
-jBC = jBC+1;
-casedef.BC{jBC}.zoneID = 'ZUIDRAND';
-casedef.BC{jBC}.kind_u   = 'Dirichlet';
-casedef.BC{jBC}.data.bcval_u = 0;
-casedef.BC{jBC}.kind_v   = 'Dirichlet';
-casedef.BC{jBC}.data.bcval_v = 0;
-jBC = jBC+1;
-casedef.BC{jBC}.zoneID = 'NOORDRAND';
-casedef.BC{jBC}.kind_u = 'Dirichlet';
-casedef.BC{jBC}.data.bcval_u = 0;
-casedef.BC{jBC}.kind_v  = 'Dirichlet';
-casedef.BC{jBC}.data.bcval_v = 0;
+switch MMS_case
+   case 'example'
+        jBC = 0;
+        jBC = jBC+1;
+        casedef.BC{jBC}.zoneID = 'WESTRAND';
+        casedef.BC{jBC}.kind_u   = 'Dirichlet';
+        casedef.BC{jBC}.data.bcval_u = U_chosen;
+        casedef.BC{jBC}.kind_v   = 'Dirichlet';
+        casedef.BC{jBC}.data.bcval_v = U_chosen;
+        jBC = jBC+1;
+        casedef.BC{jBC}.zoneID = 'OOSTRAND';
+        casedef.BC{jBC}.kind_u   = 'Dirichlet';
+        casedef.BC{jBC}.data.bcval_u = U_chosen;
+        casedef.BC{jBC}.kind_v   = 'Dirichlet';
+        casedef.BC{jBC}.data.bcval_v = U_chosen;
+        jBC = jBC+1;
+        casedef.BC{jBC}.zoneID = 'ZUIDRAND';
+        casedef.BC{jBC}.kind_u   = 'Dirichlet';
+        casedef.BC{jBC}.data.bcval_u = U_chosen;
+        casedef.BC{jBC}.kind_v   = 'Dirichlet';
+        casedef.BC{jBC}.data.bcval_v = U_chosen;
+        jBC = jBC+1;
+        casedef.BC{jBC}.zoneID = 'NOORDRAND';
+        casedef.BC{jBC}.kind_u = 'Dirichlet';
+        casedef.BC{jBC}.data.bcval_u = U_chosen;
+        casedef.BC{jBC}.kind_v  = 'Dirichlet';
+        casedef.BC{jBC}.data.bcval_v = U_chosen;
+end
+
 
 % Set up iteration parameters
 casedef.iteration.maxniter = 10; 
 casedef.iteration.TTol     = 1e-6;
-casedef.iteration.dt       = 50;%50;
+casedef.iteration.dt       = 50;
 
 % Call solver
-result = examplesolver4(casedef);
+result = examplesolver5(casedef);
+set(U_diff,U_diff.data-result.U.data);
 
 normal = Field(casedef.dom.allFaces,1);
 tangent = Field(casedef.dom.allFaces,1);
@@ -109,22 +121,17 @@ set(tangent,[casedef.dom.fTangent]);
 set(xi,[casedef.dom.fXi]);
 
 %% Plot result
-figure; hold on; axis off; axis equal; colormap(jet(50));
-colorbar
-scale = 'lin'; lw = 1;
-fvmplotfield(result.U,scale,lw,1); % 1 plots u, 2 plots v
-fvmplotmesh(casedef.dom,lw);
+% figure; hold on; axis off; axis equal; colormap(jet(50));
+% colorbar
+% scale = 'lin'; lw = 1;
+% fvmplotfield(result.U,scale,lw,1); % 1 plots u, 2 plots v
+% fvmplotmesh(casedef.dom,lw);
 display("Number of false time steps: ")
 display(result.steps)
 display("End time: ")
 display(result.time)
 display("Max norm error: ")
 display(result.UResnorm)
-%%%
-%figure; hold on; axis off; axis equal; colormap(jet(50));
-%fvmplotvectorfield(result.U,lw,1);
-%fvmplotmesh(casedef.dom,lw);
-%%%
 %Uoost = restrictto(U,getzone(casedef.dom,'OOSTRAND'));
 %fvmplotvectorfield(Uoost,lw);
 %fvmplotmesh(casedef.dom,lw);
@@ -135,23 +142,54 @@ display(result.UResnorm)
 %fvmplotfacenumbers(casedef.dom,8);
 %fvmplotvertexnumbers(casedef.dom,8);
 
-%% Session 4: 
-% North, South: Dirichlet, 0
-% East, West: Neumann, 0
-figure
-pValues = [0 20 40 60 80 100];
-ind0 = nCy*ceil(nCx/2)+1;
-indices = ind0:(ind0+nCy-1);
-leg = {};
-cntr = 1;
-for px = pValues
-    casedef.vars.pIn = px;
-    result = examplesolver4(casedef);
-    plotSection(casedef.dom.cCoord,result.U.data(1,:),indices,'y',2)
-    hold on
-    leg{cntr} = strcat('p_{in} = ', num2str(px));
-    cntr = cntr + 1;
-end
-lgd = legend(leg);
-lgd.Location = 'northwest';
+%% Compare analtical
+figure; hold on; axis off; axis equal; colormap(jet(50));
+colorbar
+scale = 'lin'; lw = 1;
+
+subplot(2,3,1) % Computed solution X
+colorbar
+fvmplotfield(result.U,scale,lw,1);
+fvmplotmesh(casedef.dom,lw);
+title('U_x code')
+
+subplot(2,3,4) % Computed solution Y
+colorbar
+fvmplotfield(result.U,scale,lw,2);
+fvmplotmesh(casedef.dom,lw);
+title('U_y code')
+
+subplot(2,3,2) % Analytical solution X
+colorbar
+fvmplotfield(U_sol,scale,lw,1);
+fvmplotmesh(casedef.dom,lw);
+title('U_x analytical')
+
+subplot(2,3,5) % Analytical solution Y
+colorbar
+fvmplotfield(U_sol,scale,lw,2);
+fvmplotmesh(casedef.dom,lw);
+title('U_y analytical')
+
+subplot(2,3,3) % Error X
+colorbar
+fvmplotfield(U_diff,scale,lw,1);
+fvmplotmesh(casedef.dom,lw);
+title('U_x error')
+
+subplot(2,3,6) % Error Y
+colorbar
+fvmplotfield(U_diff,scale,lw,2);
+fvmplotmesh(casedef.dom,lw);
+title('U_y error')
+
+
+
+
+
+
+
+
+
+
 
