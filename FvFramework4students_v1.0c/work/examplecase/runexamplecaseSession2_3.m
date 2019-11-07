@@ -26,8 +26,8 @@ clc
 
 % Create a mesh
 % Orthogonal mesh
-nCx = 10;
-nCy = 10;
+nCx = 100;
+nCy = 100;
 Lx = 1;
 Ly = 1;
 seedI = LineSeed.lineSeedOneWayBias([0 0],[Lx 0],nCx,1.00,'o'); 
@@ -44,7 +44,7 @@ T = Field(casedef.dom.allCells,0);     % Temperature [K] (scalar); empty field
 randomdata = rand(T.elsize,T.elcountzone)-0.5;
 set(T,randomdata);                     % Set with random numbers
 
-uValueX = 0;
+uValueX = 20;
 uValueY = 0;
 U = Field(casedef.dom.allCells,1);     % Velocity [m/s] (vector);
 %set(U,[rand(1,U.elcountzone);rand(1,U.elcountzone)]);
@@ -65,7 +65,7 @@ casedef.BC{jBC}.data.bcval = 0;
 jBC = jBC+1;
 casedef.BC{jBC}.zoneID = 'OOSTRAND';
 casedef.BC{jBC}.kind   = 'Dirichlet';
-casedef.BC{jBC}.data.bcval = 10;
+casedef.BC{jBC}.data.bcval = 1;
 jBC = jBC+1;
 casedef.BC{jBC}.zoneID = 'ZUIDRAND';
 casedef.BC{jBC}.kind   = 'Neumann';
@@ -100,7 +100,7 @@ scale = 'lin'; lw = 1;
 fvmplotfield(result.T,scale,lw);
 %Uoost = restrictto(U,getzone(casedef.dom,'OOSTRAND'));
 %fvmplotvectorfield(Uoost,lw);
-fvmplotmesh(casedef.dom,lw);
+%fvmplotmesh(casedef.dom,lw);
 %fvmplotvectorfield(normal,lw);
 %fvmplotvectorfield(tangent,lw);
 %fvmplotvectorfield(xi,lw);
@@ -112,21 +112,48 @@ fvmplotmesh(casedef.dom,lw);
 % North, South: Neumann, 0
 % East: Dirichlet, 10
 % West; Dirichlet, 0
+% Analytic: T(x) = (exp(x*Pe)-1) / (exp(Pe))
+
+T_anal = @(x,Pe) (exp(Pe*x) - 1 ) ./ (exp(Pe)-1);
+x0 = Lx/nCx/2;
+dx = Lx/nCx;
+xL = x0 + (nCx-1)*dx;
+x = x0:dx:xL;
+
 figure
-Uvalues = [0 25 50 75 100 125];
-Pe = Lx*Uvalues*1000*4.18/(casedef.material.k);
+Uvalues = [20 60 100];
+%Pe = Lx*Uvalues*1000*4.18/(casedef.material.k);
+Pe = Lx*Uvalues*1/(casedef.material.k);
 ind0 = ceil(nCy/2);
 step = nCy*(0:1:(nCx-1));
 indices = ind0 + step;
 leg = {};
+leg2 = {};
 cntr = 1;
 for Ux = Uvalues
     set(U,[Ux*ones(1,U.elcountzone);0*ones(1,U.elcountzone)]);
     result = examplesolver(casedef);
-    plotSection(casedef.dom.cCoord,result.T.data,indices,'x',2)
+    subplot(1,2,1)
+    [XX,T] = plotSection(casedef.dom.cCoord,result.T.data,indices,'x',2);
     hold on
-    leg{cntr} = strcat('U_x = ', num2str(Ux), ', Pe = ',num2str(Pe(cntr)));
+    leg{2*cntr-1} = strcat('U_x = ', num2str(Ux), ', Pe = ',num2str(Pe(cntr)));
+    T_anal_x = T_anal(x,Pe(cntr));
+    plot(x,T_anal_x,'--','LineWidth',1)
+    leg{2*cntr} = strcat('Analytic: U_x = ', num2str(Ux), ', Pe = ',num2str(Pe(cntr)));
+    subplot(1,2,2)
+    hold on
+    stem(x,T-T_anal_x)
+    leg2{cntr} = strcat('Analytic: U_x = ', num2str(Ux), ', Pe = ',num2str(Pe(cntr)));
     cntr = cntr + 1;
 end
+subplot(1,2,1)
 lgd = legend(leg);
 lgd.Location = 'northwest';
+grid on
+subplot(1,2,2)
+xlabel('x')
+ylabel('error')
+lgd = legend(leg2);
+lgd.Location = 'southwest';
+grid on
+

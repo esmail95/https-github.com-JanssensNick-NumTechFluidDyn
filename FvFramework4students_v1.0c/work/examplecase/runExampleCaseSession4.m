@@ -26,10 +26,10 @@ clc
 
 % Create a mesh
 % Orthogonal mesh
-nCx = 100;
-nCy = 100;
-x2 = [1,1];
-y2 = [-1,1];
+nCx = 10;
+nCy = 10;
+x2 = [1,0];
+y2 = [0,1];
 Lx = 1;
 Ly = 1;
 seedI = LineSeed.lineSeedOneWayBias([0 0],x2,nCx,Lx,'o'); 
@@ -144,7 +144,7 @@ cntr = 1;
 for px = pValues
     casedef.vars.pIn = px;
     result = examplesolver4(casedef);
-    plotSection(casedef.dom.cCoord,result.U.data(1,:),indices,'y',2)
+    plotSection(casedef.dom.cCoord,result.U.data(1,:),indices,'y',2);
     hold on
     leg{cntr} = strcat('p_{in} = ', num2str(px));
     cntr = cntr + 1;

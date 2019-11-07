@@ -1,4 +1,4 @@
-function plotSection(cCoord,result,indices,xy,LineWidth)
+function [plotDataX, plotDataY] = plotSection(cCoord,result,indices,xy,LineWidth)
 %PLOTSECTION Summary of this function goes here
 %   Detailed explanation goes here
     x = 0*indices;
@@ -19,6 +19,7 @@ function plotSection(cCoord,result,indices,xy,LineWidth)
     end 
     %scatter(x,y)
     plot(x,y,'-','LineWidth',LineWidth)
-    
+    plotDataX = x;
+    plotDataY = y;    
 end
 

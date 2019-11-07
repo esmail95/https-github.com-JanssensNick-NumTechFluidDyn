@@ -82,33 +82,44 @@ while iterate
       Uf = l*U(:,nb1) + (1-l)*U(:,nb2);
       Unf = dot(Uf,fNormal(:,i)); 
       %%% Compute sign of the normal
-      diff = cCoord(:,nb2)-cCoord(:,nb1);
-      outw = sign(dot(diff,fNormal(:,i)));
-      %%%
-      % Diagonal elements
-      ap(nb1) = ap(nb1) - k*Af/Xif + outw*l*Unf*Af; % advection + diffusion term
-      ap(nb2) = ap(nb2) - k*Af/Xif - outw*l*Unf*Af;
-      % Off-diagonal elements for internal faces
-      aNbInt(2*i) = aNbInt(2*i) + k*Af/Xif + outw*(1-l)*Unf*Af; % Benedendiagonaal
-      aNbInt(2*i-1) = aNbInt(2*i-1) + k*Af/Xif - outw*(1-l)*Unf*Af; % Bovendiagonaal
+      %diff = cCoord(:,nb2)-cCoord(:,nb1);
+      %outw = sign(dot(diff,fNormal(:,i)));
+      outw = 1;
+      
+      %%% With diffusion in reversed direction and advection in the right
+      %%% direction (very accurate result)
+      ap(nb1) = ap(nb1) + k*Af/Xif + outw*l*Unf*Af; % advection + diffusion term
+      ap(nb2) = ap(nb2) + k*Af/Xif - outw*l*Unf*Af;
+      aNbInt(2*i-1) = aNbInt(2*i-1) - k*Af/Xif + outw*(1-l)*Unf*Af; % Upper diag, corresponds to nb1 contribution
+      aNbInt(2*i) = aNbInt(2*i) - k*Af/Xif - outw*(1-l)*Unf*Af;
+      
+      % With diffusion in original direction and advection in the wrong
+      % direction (okay result)
+      %ap(nb1) = ap(nb1) - k*Af/Xif + outw*l*Unf*Af; % advection + diffusion term
+      %ap(nb2) = ap(nb2) - k*Af/Xif - outw*l*Unf*Af;
+      %aNbInt(2*i) = aNbInt(2*i) + k*Af/Xif + outw*(1-l)*Unf*Af; %
+      %aNbInt(2*i-1) = aNbInt(2*i-1) + k*Af/Xif - outw*(1-l)*Unf*Af; %
+
+      % With diffusion in original direction and advection in the right
+      % direction (erronous result)
+      %ap(nb1) = ap(nb1) - k*Af/Xif + outw*l*Unf*Af; % advection + diffusion term
+      %ap(nb2) = ap(nb2) - k*Af/Xif - outw*l*Unf*Af;      
+      %aNbInt(2*i-1) = aNbInt(2*i-1) + k*Af/Xif + outw*(1-l)*Unf*Af; % Upper diag, corresponds to nb1 contribution
+      %aNbInt(2*i) = aNbInt(2*i) + k*Af/Xif - outw*(1-l)*Unf*Af; % Lower diag, corresponds to nb2 contribution
    end
    % Compute coefficients for ghost cell eqns and add them to eqn object
    for i = 1:nBf
       nb1 = fNbC(2*i-1 + 2*nIf); % Physicl cell
       nb2 = fNbC(2*i + 2*nIf); % Ghost Cell
-      %c1 = cCoord(:,nb1);
-      %c2 = cCoord(:,nb2);
-      %fc = fCoord(:,i + nIf);
-      %l = lambda(c1,c2,fc);
       l = fXiLamba(i + nIf);
-      
       Af = fArea(i + nIf);
       Xif = norm(Xi(:,i + nIf));
       Uf = l*U(:,nb1) + (1-l)*U(:,nb2);
       Unf = dot(Uf,fNormal(:,i + nIf));
       %%%
-      diff = cCoord(:,nb2)-cCoord(:,nb1);
-      outw = sign(dot(diff,fNormal(:,i + nIf))); %%%%%% CHANGED 19/10
+      %diff = cCoord(:,nb2)-cCoord(:,nb1);
+      %outw = sign(dot(diff,fNormal(:,i + nIf))); %%%%%% CHANGED 19/10
+      outw = 1;
       %%%
       boundaryFound = 0;
       for j = 1:nbZones
@@ -120,13 +131,16 @@ while iterate
                     %l*phi(GC) + (1-l)*phi(PC) = phi*
                     % Diagonal elements from BC: ghost cell
                     ap(nb2) = l;
-                    % Diagonal elements: physical cells
-                    ap(nb1) = ap(nb1) - k*Af/Xif + outw*l*Unf*Af;
-                                        
-                    % Off-diagonal elements: physical cell
                     aNbBound(2*i) = 1-l;
-                    % Off-diagonal elements: ghost cells
-                    aNbBound(2*i-1) = aNbBound(2*i-1) + k*Af/Xif + outw*(1-l)*Unf*Af;
+                    % Diagonal elements: physical cells
+                    
+                    % With inversed diffusion
+                    ap(nb1) = ap(nb1) + k*Af/Xif + outw*l*Unf*Af;
+                    aNbBound(2*i-1) = aNbBound(2*i-1) - k*Af/Xif + outw*(1-l)*Unf*Af;
+                    
+                    % With diffusion in original direction
+                    %ap(nb1) = ap(nb1) - k*Af/Xif + outw*l*Unf*Af;
+                    %aNbBound(2*i-1) = aNbBound(2*i-1) + k*Af/Xif + outw*(1-l)*Unf*Af;
                     
                     % Forcing terms
                     phi_star = BC{j}.data.bcval;
@@ -136,13 +150,16 @@ while iterate
                     % (phi(PC)-phi(GC))/Ef=phi*
                     % Diagonal elements from BC: ghost cell
                     ap(nb2) = -1/Xif;
-                    % Diagonal elements: physical cells
-                    ap(nb1) = ap(nb1) - k*Af/Xif + outw*(1-l)*Unf*Af;
-                    
-                    % Off-diagonal elements: physical cell
                     aNbBound(2*i) = 1/Xif;
-                    % Off-diagonal elements: ghost cells
-                    aNbBound(2*i-1) = aNbBound(2*i-1) + k*Af/Xif + outw*(1-l)*Unf*Af;
+                    
+                    % Diagonal elements: physical cells
+                    % With inversed diffusion
+                    ap(nb1) = ap(nb1) + k*Af/Xif + outw*(1-l)*Unf*Af;
+                    aNbBound(2*i-1) = aNbBound(2*i-1) - k*Af/Xif + outw*(1-l)*Unf*Af;
+                    
+                    % With original diffusion            
+                    %ap(nb1) = ap(nb1) - k*Af/Xif + outw*(1-l)*Unf*Af;
+                    %aNbBound(2*i-1) = aNbBound(2*i-1) + k*Af/Xif + outw*(1-l)*Unf*Af;
                     
                     % Forcing terms
                     phi_star = BC{j}.data.bcval;
