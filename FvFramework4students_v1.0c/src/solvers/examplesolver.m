@@ -188,7 +188,7 @@ while iterate
    if TResnorm < casedef.iteration.tol
       Tconverged = true;
       iterate = false;
-   elseif niter > casedef.iteration.maxniter
+   elseif niter > casedef.iteration.maxniter_solver
       Tconverged = false;
       iterate = false;
 %    elseif checkstoprequest(stopmon)

@@ -22,7 +22,8 @@ clc
 %   - advection-diffusion
 %   - advection-diffusion with fixed pressure gradient
 %   - verification with method of manufactured solutions
-case_def = 'MMS'; % 'advection-diffusion-fixed-pressure', 'MMS'
+%   - Pressuree-velocity with odd-even decoupling
+case_def = 'advection-diffusion'; % 'advection-diffusion', 'advection-diffusion-fixed-pressure', 'MMS', 'odd-even-decoupling'
 MMS_case = 'example-slides';
 boundary_cond = 'standard';
 analytical = 1;
@@ -33,12 +34,14 @@ origin = [0, 0]; % Origin of the mesh
 xAxis = [1, 0]; yAxis = [0, 1]; % x-axis and y-axis direction
 skewX = 1.00; skewY = 1.00; % Mesh skewness
 
+
 % Initial fields (are ignored if init_velocity_field is set)
 uValue = 0;
 vValue = 0;
 
 % Pressure difference 
 pIn = 50; pOut = 0;
+pValue = (pIn+pOut)/2;
 
 % Material properties
 % Define material properties
@@ -55,12 +58,15 @@ Source = @(x,y) [4*x.^3 - 2*x.^2.*y - 2*nu ; -2*x.*y.^2 + 4*y.^3 + 2*nu]; % Anal
 uBC_names = {'Neumann','Neumann','Dirichlet','Dirichlet'};
 vBC_names = {'Neumann','Neumann','Dirichlet','Dirichlet'};
 TBC_names = {'Dirichlet','Dirichlet','Neumann','Neumann'};
+pBC_names = {'Dirichlet','Dirichlet','Neumann','Neumann'};
 uBC_values = [0, 0, 0, 0];
 vBC_values = [0, 0, 0, 0];
 TBC_values = [0, 1, 0, 0];
+pBC_values = [pIn, pOut, 0, 0];
 
 % Iteration parameters
-maxniter = 1000; 
+maxniter_solver = 1000;
+maxniter_stepping = 1000;
 tol      = 1e-6;
 dt       = 50;
 
@@ -86,6 +92,10 @@ set(T,randomdata);
 % MMS solution and error fields
 U_sol = Field(casedef.dom.allCells,1);     % Velocity [m/s]
 U_diff = Field(casedef.dom.allCells,1);    % Error velocity [m/s] 
+% Pressure field
+P = Field(casedef.dom.allCells,0);     % Pressure [Pa] 
+set(P,pValue*ones(1,P.elcountzone));     
+casedef.vars.P = P;                    % Save P in the casedef
 
 % Define material properties
 switch case_def
@@ -95,6 +105,9 @@ switch case_def
     case 'advection-diffusion-fixed-pressure'
         casedef.material.k = nu; % Thermal conductivity [W/(m K)]
         casedef.material.rho = rho; % density [kg/m^3]
+    case 'odd-even-decoupling'
+        casedef.material.k = nu; % Thermal conductivity [W/(m K)]
+        casedef.material.rho = rho; % density [kg/m^3]        
     otherwise
         casedef.material.k = nu; % Thermal conductivity [W/(m K)]
         casedef.material.rho = rho; % density [kg/m^3]
@@ -109,9 +122,12 @@ switch MMS_case
     case 'example-slides'
         U_chosen = @(x,y) [x.^2;-y.^2];  % Imposed pressure field
         set(U_sol,U_chosen(casedef.dom.cCoord(1,:),casedef.dom.cCoord(2,:)));
+        set(U_diff,U_chosen(casedef.dom.cCoord(1,:),casedef.dom.cCoord(2,:))); 
         Source = @(x,y) [4*x.^3 - 2*x.^2.*y - 2*nu ; -2*x.*y.^2 + 4*y.^3 + 2*nu]; % Analytically computed source term
         casedef.vars.Source = Source;
     otherwise
+        set(U_sol,U_chosen(casedef.dom.cCoord(1,:),casedef.dom.cCoord(2,:)));
+        set(U_diff,U_chosen(casedef.dom.cCoord(1,:),casedef.dom.cCoord(2,:))); 
         casedef.vars.Source = Source;
 end
 
@@ -153,7 +169,24 @@ switch boundary_cond
                 casedef.BC{jBC}.kind_v = 'Dirichlet'; casedef.BC{jBC}.data.bcval_v = U_chosen;
                 jBC = jBC+1; casedef.BC{jBC}.zoneID = 'NOORDRAND';
                 casedef.BC{jBC}.kind_u = 'Dirichlet'; casedef.BC{jBC}.data.bcval_u = U_chosen;
-                casedef.BC{jBC}.kind_v = 'Dirichlet'; casedef.BC{jBC}.data.bcval_v = U_chosen;     
+                casedef.BC{jBC}.kind_v = 'Dirichlet'; casedef.BC{jBC}.data.bcval_v = U_chosen; 
+            case 'odd-even-decoupling'
+                jBC = 0; jBC = jBC+1; casedef.BC{jBC}.zoneID = 'WESTRAND'; 
+                casedef.BC{jBC}.kind_u = 'Neumann'; casedef.BC{jBC}.data.bcval_u = 0;
+                casedef.BC{jBC}.kind_v = 'Neumann'; casedef.BC{jBC}.data.bcval_v = 0;
+                casedef.BC{jBC}.kind_p = 'Dirichlet'; casedef.BC{jBC}.data.bcval_p = pIn;
+                jBC = jBC+1; casedef.BC{jBC}.zoneID = 'OOSTRAND';
+                casedef.BC{jBC}.kind_u = 'Neumann'; casedef.BC{jBC}.data.bcval_u = 0;
+                casedef.BC{jBC}.kind_v = 'Neumann'; casedef.BC{jBC}.data.bcval_v = 0;
+                casedef.BC{jBC}.kind_p = 'Dirichlet'; casedef.BC{jBC}.data.bcval_p = pOut;
+                jBC = jBC+1; casedef.BC{jBC}.zoneID = 'ZUIDRAND';
+                casedef.BC{jBC}.kind_u = 'Dirichlet'; casedef.BC{jBC}.data.bcval_u = 0;
+                casedef.BC{jBC}.kind_v = 'Dirichlet'; casedef.BC{jBC}.data.bcval_v = 0;
+                casedef.BC{jBC}.kind_p = 'Neumann'; casedef.BC{jBC}.data.bcval_p = 0;
+                jBC = jBC+1; casedef.BC{jBC}.zoneID = 'NOORDRAND';
+                casedef.BC{jBC}.kind_u = 'Dirichlet'; casedef.BC{jBC}.data.bcval_u = 0;
+                casedef.BC{jBC}.kind_v = 'Dirichlet'; casedef.BC{jBC}.data.bcval_v = 0;
+                casedef.BC{jBC}.kind_p = 'Neumann'; casedef.BC{jBC}.data.bcval_p = 0;
         end
     otherwise
         switch case_def
@@ -192,13 +225,31 @@ switch boundary_cond
                 jBC = jBC+1; casedef.BC{jBC}.zoneID = 'NOORDRAND';
                 casedef.BC{jBC}.kind_u = 'Dirichlet'; casedef.BC{jBC}.data.bcval_u = U_chosen;
                 casedef.BC{jBC}.kind_v = 'Dirichlet'; casedef.BC{jBC}.data.bcval_v = U_chosen; 
+            case 'odd-even-decoupling'
+                jBC = 0; jBC = jBC+1; casedef.BC{jBC}.zoneID = 'WESTRAND'; 
+                casedef.BC{jBC}.kind_u = uBC_names(jBC); casedef.BC{jBC}.data.bcval_u = uBC_values(jBC);
+                casedef.BC{jBC}.kind_v = vBC_names(jBC); casedef.BC{jBC}.data.bcval_v = vBC_values(jBC);
+                casedef.BC{jBC}.kind_p = pBC_names(jBC); casedef.BC{jBC}.data.bcval_p = pBC_values(jBC);
+                jBC = jBC+1; casedef.BC{jBC}.zoneID = 'OOSTRAND';
+                casedef.BC{jBC}.kind_u = uBC_names(jBC); casedef.BC{jBC}.data.bcval_u = uBC_values(jBC);
+                casedef.BC{jBC}.kind_v = vBC_names(jBC); casedef.BC{jBC}.data.bcval_v = vBC_values(jBC);
+                casedef.BC{jBC}.kind_p = pBC_names(jBC); casedef.BC{jBC}.data.bcval_p = pBC_values(jBC);
+                jBC = jBC+1; casedef.BC{jBC}.zoneID = 'ZUIDRAND';
+                casedef.BC{jBC}.kind_u = uBC_names(jBC); casedef.BC{jBC}.data.bcval_u = uBC_values(jBC);
+                casedef.BC{jBC}.kind_v = vBC_names(jBC); casedef.BC{jBC}.data.bcval_v = vBC_values(jBC);
+                casedef.BC{jBC}.kind_p = pBC_names(jBC); casedef.BC{jBC}.data.bcval_p = pBC_values(jBC);
+                jBC = jBC+1; casedef.BC{jBC}.zoneID = 'NOORDRAND';
+                casedef.BC{jBC}.kind_u = uBC_names(jBC); casedef.BC{jBC}.data.bcval_u = uBC_values(jBC);
+                casedef.BC{jBC}.kind_v = vBC_names(jBC); casedef.BC{jBC}.data.bcval_v = vBC_values(jBC);
+                casedef.BC{jBC}.kind_p = pBC_names(jBC); casedef.BC{jBC}.data.bcval_p = pBC_values(jBC);                
         end
 end
 
 % Set up iteration parameters
-casedef.iteration.maxniter = maxniter; 
-casedef.iteration.tol      = tol;
-casedef.iteration.dt       = dt;
+casedef.iteration.maxniter_solver   = maxniter_solver; 
+casedef.iteration.maxniter_stepping = maxniter_stepping; 
+casedef.iteration.tol               = tol;
+casedef.iteration.dt                = dt;
 
 %% Call solver
 switch case_def
@@ -223,6 +274,14 @@ switch case_def
         display(result.time)
         disp("Max norm error: ")
         display(result.UResnorm)
+    case 'odd-even-decoupling'
+        result = examplesolver6(casedef);
+        disp("Number of false time steps: ")
+        display(result.steps)
+        disp("End time: ")
+        display(result.time)
+        disp("Max norm error: ")
+        display(result.UResnorm)        
 end
 
 normal = Field(casedef.dom.allFaces,1);
@@ -250,8 +309,18 @@ switch case_def
         title("U_x")
         fvmplotfield(result.U,scale,lw,1); 
         subplot(1,2,2); colorbar
-        titlme("U_y")
+        title("U_y")
         fvmplotfield(result.U,scale,lw,2);
+    case 'odd-even-decoupling'
+        subplot(1,3,1); colorbar
+        title("U_x")
+        fvmplotfield(result.U,scale,lw,1); 
+        subplot(1,3,2); colorbar
+        title("U_y")
+        fvmplotfield(result.U,scale,lw,2);
+        subplot(1,3,3); colorbar
+        title("P")
+        fvmplotfield(result.P,scale,lw);
 end
 fvmplotmesh(casedef.dom,lw);
 %fvmplotvectorfield(normal,lw);
@@ -324,6 +393,30 @@ switch case_def
         grid on;
         xlabel("x")
         ylabel("U_x")
+    case 'odd-even-decoupling'
+        figure
+        subplot(1,2,1)
+        ind0 = nCy*ceil(nCx/2)+1;
+        indices = ind0:(ind0+nCy-1);
+        leg = {};
+        plotSection(casedef.dom.cCoord,result.U.data(1,:),indices,'y',2);
+        leg{1} = strcat('p_{in} = ', num2str(pIn), 'p_{out} = ', num2str(p_out));
+        lgd = legend(leg);
+        lgd.Location = 'northwest';
+        grid on;
+        xlabel("x")
+        ylabel("U_x")
+        subplot(1,2,2)
+        ind0 = ceil(nCy/2);
+        indices = ind0 + nCy(0:(nCx-1));
+        leg = {};
+        plotSection(casedef.dom.cCoord,result.P.data,indices,'x',2);
+        leg{1} = strcat('p_{in} = ', num2str(pIn), 'p_{out} = ', num2str(p_out));
+        lgd = legend(leg);
+        lgd.Location = 'northwest';
+        grid on;
+        xlabel("x")
+        ylabel("p")
 end
         
 %% Plot results: error on analytical soltion

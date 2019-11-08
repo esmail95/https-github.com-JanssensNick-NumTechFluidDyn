@@ -289,7 +289,7 @@ while iterate
    if Resnorm < casedef.iteration.tol
       %converged = true;
       iterate = false;
-   elseif niter > casedef.iteration.maxniter
+   elseif niter > casedef.iteration.maxniter_solver
       %converged = false;
       iterate = false;
 %    elseif checkstoprequest(stopmon)
