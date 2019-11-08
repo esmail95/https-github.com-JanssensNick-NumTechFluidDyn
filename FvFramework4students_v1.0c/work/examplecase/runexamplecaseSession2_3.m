@@ -67,6 +67,7 @@ casedef.BC{jBC}.zoneID = 'OOSTRAND';
 casedef.BC{jBC}.kind   = 'Dirichlet';
 casedef.BC{jBC}.data.bcval = 1;
 jBC = jBC+1;
+
 casedef.BC{jBC}.zoneID = 'ZUIDRAND';
 casedef.BC{jBC}.kind   = 'Neumann';
 casedef.BC{jBC}.data.bcval = 0;
@@ -79,7 +80,7 @@ casedef.BC{jBC}.data.bcval = 0;
 
 % Set up iteration parameters
 casedef.iteration.maxniter = 1000; 
-casedef.iteration.TTol     = 1e-6;
+casedef.iteration.tol      = 1e-6;
 
 
 % Call solver
@@ -132,6 +133,7 @@ leg2 = {};
 cntr = 1;
 for Ux = Uvalues
     set(U,[Ux*ones(1,U.elcountzone);0*ones(1,U.elcountzone)]);
+    casedef.vars.U = U;                    % Save U in the casedef
     result = examplesolver(casedef);
     subplot(1,2,1)
     [XX,T] = plotSection(casedef.dom.cCoord,result.T.data,indices,'x',2);

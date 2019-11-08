@@ -292,7 +292,7 @@ while iterate
    UResnorm = norm(URes);
    VResnorm = norm(VRes);
    Resnorm = max(UResnorm,VResnorm);      
-   if Resnorm < casedef.iteration.TTol
+   if Resnorm < casedef.iteration.tol
       %converged = true;
       iterate = false;
    elseif niter > casedef.iteration.maxniter
@@ -309,7 +309,7 @@ while iterate
       set(U,x'); % Put algebraic solution in the Field
    end
 end % iterate
-if max(norm(U.data(1,:)-U_old.data(1,:)),norm(U.data(2,:)-U_old.data(2,:))) < casedef.iteration.TTol
+if max(norm(U.data(1,:)-U_old.data(1,:)),norm(U.data(2,:)-U_old.data(2,:))) < casedef.iteration.tol
     stepping = false;
 else
     stepping = true;

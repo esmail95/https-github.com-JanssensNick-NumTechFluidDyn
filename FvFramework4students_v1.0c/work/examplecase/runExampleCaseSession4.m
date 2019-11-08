@@ -26,8 +26,8 @@ clc
 
 % Create a mesh
 % Orthogonal mesh
-nCx = 10;
-nCy = 10;
+nCx = 100;
+nCy = 100;
 x2 = [1,0];
 y2 = [0,1];
 Lx = 1;
@@ -60,7 +60,7 @@ casedef.material.k = 0.1; % Thermal conductivity [W/(m K)]
 casedef.material.rho = 1; % density [kg/m^3]
 
 casedef.vars.U = U;
-casedef.vars.pIn = 100;
+casedef.vars.pIn = 50;
 casedef.vars.pOut = 0;
 
 % Define boundary conditions: for u and v
@@ -92,7 +92,7 @@ casedef.BC{jBC}.data.bcval_v = 0;
 
 % Set up iteration parameters
 casedef.iteration.maxniter = 10; 
-casedef.iteration.TTol     = 1e-6;
+casedef.iteration.tol      = 1e-6;
 casedef.iteration.dt       = 50;%50;
 
 % Call solver

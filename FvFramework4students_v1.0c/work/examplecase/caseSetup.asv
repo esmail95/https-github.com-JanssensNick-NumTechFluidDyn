@@ -22,11 +22,10 @@ clc
 %   - advection-diffusion
 %   - advection-diffusion with fixed pressure gradient
 %   - verification with method of manufactured solutions
-case_def = 'advection-diffusion'; % 'advection-diffusion-fixed-pressure', 'MMS'
-mesh_def = 'standard-orthogonal';
-init_velocity_field = 'zero-field';
+case_def = 'MMS'; % 'advection-diffusion-fixed-pressure', 'MMS'
 MMS_case = 'example-slides';
 boundary_cond = 'standard';
+analytical = 1;
 
 % Mesh parameters (are ignored if mesh_def is set)
 nCx = 100; nCy = 100; % Number of cells
@@ -52,15 +51,21 @@ U_chosen = @(x,y) [x.^2;-y.^2];  % Imposed velocity field
 Source = @(x,y) [4*x.^3 - 2*x.^2.*y - 2*nu ; -2*x.*y.^2 + 4*y.^3 + 2*nu]; % Analytically computed source term
 
 % Boundary conditions (are ignored if boundary_cond is set)
-    
-%% Creation of the mesh
-switch mesh_def
-    case 'standard-orthogonal'
-        nCx = 10; nCy = 10; 
-        origin = [0, 0]; xAxis = [1, 0]; yAxis = [0, 1]; 
-        skewX = 1.00; skewY = 1.00;
-end
-        
+% Order: west, east, south, north
+uBC_names = {'Neumann','Neumann','Dirichlet','Dirichlet'};
+vBC_names = {'Neumann','Neumann','Dirichlet','Dirichlet'};
+TBC_names = {'Dirichlet','Dirichlet','Neumann','Neumann'};
+uBC_values = [0, 0, 0, 0];
+vBC_values = [0, 0, 0, 0];
+TBC_values = [0, 1, 0, 0];
+
+% Iteration parameters
+maxniter = 1000; 
+tol      = 1e-6;
+dt       = 50;
+
+%% Case setup
+% Creation of the mesh   
 seedI = LineSeed.lineSeedOneWayBias(origin,xAxis,nCx,skewX,'o'); 
 seedJ = LineSeed.lineSeedOneWayBias(origin,yAxis,nCy,skewY,'o'); 
 casedef.boundarynames = {'WESTRAND','OOSTRAND','ZUIDRAND','NOORDRAND'};
@@ -69,27 +74,20 @@ casedef.dom = newdomain(mesh,'MyDomain');
 dX = seedI.displX; dY = seedJ.displY;
 casedef.vars.dX = dX; casedef.vars.dY = dY; % Length of the domain 
 
-%% Setting up initial fields
+% Setting up initial fields
 % Velocity field
 U = Field(casedef.dom.allCells,1);     % Velocity [m/s] 
-switch init_velocity_field
-    case 'zero-field'
-        set(U,[zeros(1,U.elcountzone);zeros(1,U.elcountzone)]);
-    otherwise
-        set(U,[uValueX*ones(1,U.elcountzone);uValueY*ones(1,U.elcountzone)]);     
-end
+set(U,[uValue*ones(1,U.elcountzone);vValue*ones(1,U.elcountzone)]);     
 casedef.vars.U = U;                    % Save U in the casedef
-switch case_def
-    case 'advection-diffusion' % Temperature field
-        T = Field(casedef.dom.allCells,0);     % Temperature [K] 
-        randomdata = rand(T.elsize,T.elcountzone)-0.5;
-        set(T,randomdata);                     
-    case 'MMS'
-        U_sol = Field(casedef.dom.allCells,1);     % Velocity [m/s]
-        U_diff = Field(casedef.dom.allCells,1);    % Error velocity [m/s] 
-end
+% Temperature field
+T = Field(casedef.dom.allCells,0);     % Temperature [K] 
+randomdata = rand(T.elsize,T.elcountzone)-0.5;
+set(T,randomdata);                     
+% MMS solution and error fields
+U_sol = Field(casedef.dom.allCells,1);     % Velocity [m/s]
+U_diff = Field(casedef.dom.allCells,1);    % Error velocity [m/s] 
 
-%% Define material properties
+% Define material properties
 switch case_def
     case 'advection-diffusion'
         casedef.material.k = k; % Thermal conductivity [W/(m K)]
@@ -102,98 +100,130 @@ switch case_def
         casedef.material.rho = rho; % density [kg/m^3]
 end
 
-%% Pressure definition
+% Pressure definition
 casedef.vars.pIn = pIn;
 casedef.vars.pOut = pOut;
 
-%% MMS source terms
+% MMS source terms
 switch MMS_case
     case 'example-slides'
         U_chosen = @(x,y) [x.^2;-y.^2];  % Imposed pressure field
+        set(U_sol,U_chosen(casedef.dom.cCoord(1,:),casedef.dom.cCoord(2,:)));
         Source = @(x,y) [4*x.^3 - 2*x.^2.*y - 2*nu ; -2*x.*y.^2 + 4*y.^3 + 2*nu]; % Analytically computed source term
         casedef.vars.Source = Source;
     otherwise
         casedef.vars.Source = Source;
 end
 
-%% Boundary conditions
+% Boundary conditions
 switch boundary_cond
     case 'standard' % Boundary conditions corresponding to the ones in the slides
         switch case_def
             case 'advection-diffusion'
-                
-            case 'advection-diffusion-fixed-p
+                jBC = 0; jBC = jBC+1; casedef.BC{jBC}.zoneID = 'WESTRAND'; 
+                casedef.BC{jBC}.kind = 'Dirichlet'; casedef.BC{jBC}.data.bcval = 0;
+                jBC = jBC+1; casedef.BC{jBC}.zoneID = 'OOSTRAND'; 
+                casedef.BC{jBC}.kind = 'Dirichlet'; casedef.BC{jBC}.data.bcval = 1;
+                jBC = jBC+1; casedef.BC{jBC}.zoneID = 'ZUIDRAND'; 
+                casedef.BC{jBC}.kind = 'Neumann'; casedef.BC{jBC}.data.bcval = 0;
+                jBC = jBC+1; casedef.BC{jBC}.zoneID = 'NOORDRAND'; 
+                casedef.BC{jBC}.kind = 'Neumann'; casedef.BC{jBC}.data.bcval = 0;
+            case 'advection-diffusion-fixed-pressure'
+                jBC = 0; jBC = jBC+1; casedef.BC{jBC}.zoneID = 'WESTRAND'; 
+                casedef.BC{jBC}.kind_u = 'Neumann'; casedef.BC{jBC}.data.bcval_u = 0;
+                casedef.BC{jBC}.kind_v = 'Neumann'; casedef.BC{jBC}.data.bcval_v = 0;
+                jBC = jBC+1; casedef.BC{jBC}.zoneID = 'OOSTRAND';
+                casedef.BC{jBC}.kind_u = 'Neumann'; casedef.BC{jBC}.data.bcval_u = 0;
+                casedef.BC{jBC}.kind_v = 'Neumann'; casedef.BC{jBC}.data.bcval_v = 0;
+                jBC = jBC+1; casedef.BC{jBC}.zoneID = 'ZUIDRAND';
+                casedef.BC{jBC}.kind_u = 'Dirichlet'; casedef.BC{jBC}.data.bcval_u = 0;
+                casedef.BC{jBC}.kind_v = 'Dirichlet'; casedef.BC{jBC}.data.bcval_v = 0;
+                jBC = jBC+1; casedef.BC{jBC}.zoneID = 'NOORDRAND';
+                casedef.BC{jBC}.kind_u = 'Dirichlet'; casedef.BC{jBC}.data.bcval_u = 0;
+                casedef.BC{jBC}.kind_v = 'Dirichlet'; casedef.BC{jBC}.data.bcval_v = 0;
+            case 'MMS'
+                jBC = 0; jBC = jBC+1; casedef.BC{jBC}.zoneID = 'WESTRAND';
+                casedef.BC{jBC}.kind_u = 'Dirichlet'; casedef.BC{jBC}.data.bcval_u = U_chosen;
+                casedef.BC{jBC}.kind_v = 'Dirichlet'; casedef.BC{jBC}.data.bcval_v = U_chosen;
+                jBC = jBC+1; casedef.BC{jBC}.zoneID = 'OOSTRAND';
+                casedef.BC{jBC}.kind_u = 'Dirichlet'; casedef.BC{jBC}.data.bcval_u = U_chosen;
+                casedef.BC{jBC}.kind_v = 'Dirichlet'; casedef.BC{jBC}.data.bcval_v = U_chosen;
+                jBC = jBC+1; casedef.BC{jBC}.zoneID = 'ZUIDRAND';
+                casedef.BC{jBC}.kind_u = 'Dirichlet'; casedef.BC{jBC}.data.bcval_u = U_chosen;
+                casedef.BC{jBC}.kind_v = 'Dirichlet'; casedef.BC{jBC}.data.bcval_v = U_chosen;
+                jBC = jBC+1; casedef.BC{jBC}.zoneID = 'NOORDRAND';
+                casedef.BC{jBC}.kind_u = 'Dirichlet'; casedef.BC{jBC}.data.bcval_u = U_chosen;
+                casedef.BC{jBC}.kind_v = 'Dirichlet'; casedef.BC{jBC}.data.bcval_v = U_chosen;     
+        end
+    otherwise
+        switch case_def
+            case 'advection-diffusion'
+                jBC = 0; jBC = jBC+1; casedef.BC{jBC}.zoneID = 'WESTRAND'; 
+                casedef.BC{jBC}.kind = TBC_names(jBC); casedef.BC{jBC}.data.bcval = TBC_values(jBC);
+                jBC = jBC+1; casedef.BC{jBC}.zoneID = 'OOSTRAND'; 
+                casedef.BC{jBC}.kind = TBC_names(jBC); casedef.BC{jBC}.data.bcval = TBC_values(jBC);
+                jBC = jBC+1; casedef.BC{jBC}.zoneID = 'ZUIDRAND'; 
+                casedef.BC{jBC}.kind = TBC_names(jBC); casedef.BC{jBC}.data.bcval = TBC_values(jBC);
+                jBC = jBC+1; casedef.BC{jBC}.zoneID = 'NOORDRAND'; 
+                casedef.BC{jBC}.kind = TBC_names(jBC); casedef.BC{jBC}.data.bcval = TBC_values(jBC);
+            case 'advection-diffusion-fixed-pressure'
+                jBC = 0; jBC = jBC+1; casedef.BC{jBC}.zoneID = 'WESTRAND'; 
+                casedef.BC{jBC}.kind_u = uBC_names(jBC); casedef.BC{jBC}.data.bcval_u = uBC_values(jBC);
+                casedef.BC{jBC}.kind_v = vBC_names(jBC); casedef.BC{jBC}.data.bcval_v = vBC_values(jBC);
+                jBC = jBC+1; casedef.BC{jBC}.zoneID = 'OOSTRAND';
+                casedef.BC{jBC}.kind_u = uBC_names(jBC); casedef.BC{jBC}.data.bcval_u = uBC_values(jBC);
+                casedef.BC{jBC}.kind_v = vBC_names(jBC); casedef.BC{jBC}.data.bcval_v = vBC_values(jBC);
+                jBC = jBC+1; casedef.BC{jBC}.zoneID = 'ZUIDRAND';
+                casedef.BC{jBC}.kind_u = uBC_names(jBC); casedef.BC{jBC}.data.bcval_u = uBC_values(jBC);
+                casedef.BC{jBC}.kind_v = vBC_names(jBC); casedef.BC{jBC}.data.bcval_v = vBC_values(jBC);
+                jBC = jBC+1; casedef.BC{jBC}.zoneID = 'NOORDRAND';
+                casedef.BC{jBC}.kind_u = uBC_names(jBC); casedef.BC{jBC}.data.bcval_u = uBC_values(jBC);
+                casedef.BC{jBC}.kind_v = vBC_names(jBC); casedef.BC{jBC}.data.bcval_v = vBC_values(jBC);
+            case 'MMS'
+                jBC = 0; jBC = jBC+1; casedef.BC{jBC}.zoneID = 'WESTRAND';
+                casedef.BC{jBC}.kind_u = 'Dirichlet'; casedef.BC{jBC}.data.bcval_u = U_chosen;
+                casedef.BC{jBC}.kind_v = 'Dirichlet'; casedef.BC{jBC}.data.bcval_v = U_chosen;
+                jBC = jBC+1; casedef.BC{jBC}.zoneID = 'OOSTRAND';
+                casedef.BC{jBC}.kind_u = 'Dirichlet'; casedef.BC{jBC}.data.bcval_u = U_chosen;
+                casedef.BC{jBC}.kind_v = 'Dirichlet'; casedef.BC{jBC}.data.bcval_v = U_chosen;
+                jBC = jBC+1; casedef.BC{jBC}.zoneID = 'ZUIDRAND';
+                casedef.BC{jBC}.kind_u = 'Dirichlet'; casedef.BC{jBC}.data.bcval_u = U_chosen;
+                casedef.BC{jBC}.kind_v = 'Dirichlet'; casedef.BC{jBC}.data.bcval_v = U_chosen;
+                jBC = jBC+1; casedef.BC{jBC}.zoneID = 'NOORDRAND';
+                casedef.BC{jBC}.kind_u = 'Dirichlet'; casedef.BC{jBC}.data.bcval_u = U_chosen;
+                casedef.BC{jBC}.kind_v = 'Dirichlet'; casedef.BC{jBC}.data.bcval_v = U_chosen; 
         end
 end
 
-
-
-
-% Define boundary conditions: for u and v
-switch MMS_case
-   case 'example'
-        jBC = 0;
-        jBC = jBC+1;
-        casedef.BC{jBC}.zoneID = 'WESTRAND';
-        casedef.BC{jBC}.kind_u   = 'Dirichlet';
-        casedef.BC{jBC}.data.bcval_u = U_chosen;
-        casedef.BC{jBC}.kind_v   = 'Dirichlet';
-        casedef.BC{jBC}.data.bcval_v = U_chosen;
-        jBC = jBC+1;
-        casedef.BC{jBC}.zoneID = 'OOSTRAND';
-        casedef.BC{jBC}.kind_u   = 'Dirichlet';
-        casedef.BC{jBC}.data.bcval_u = U_chosen;
-        casedef.BC{jBC}.kind_v   = 'Dirichlet';
-        casedef.BC{jBC}.data.bcval_v = U_chosen;
-        jBC = jBC+1;
-        casedef.BC{jBC}.zoneID = 'ZUIDRAND';
-        casedef.BC{jBC}.kind_u   = 'Dirichlet';
-        casedef.BC{jBC}.data.bcval_u = U_chosen;
-        casedef.BC{jBC}.kind_v   = 'Dirichlet';
-        casedef.BC{jBC}.data.bcval_v = U_chosen;
-        jBC = jBC+1;
-        casedef.BC{jBC}.zoneID = 'NOORDRAND';
-        casedef.BC{jBC}.kind_u = 'Dirichlet';
-        casedef.BC{jBC}.data.bcval_u = U_chosen;
-        casedef.BC{jBC}.kind_v  = 'Dirichlet';
-        casedef.BC{jBC}.data.bcval_v = U_chosen;
-    case 'degree1'
-        jBC = 0;
-        jBC = jBC+1;
-        casedef.BC{jBC}.zoneID = 'WESTRAND';
-        casedef.BC{jBC}.kind_u   = 'Dirichlet';
-        casedef.BC{jBC}.data.bcval_u = U_chosen;
-        casedef.BC{jBC}.kind_v   = 'Dirichlet';
-        casedef.BC{jBC}.data.bcval_v = U_chosen;
-        jBC = jBC+1;
-        casedef.BC{jBC}.zoneID = 'OOSTRAND';
-        casedef.BC{jBC}.kind_u   = 'Dirichlet';
-        casedef.BC{jBC}.data.bcval_u = U_chosen;
-        casedef.BC{jBC}.kind_v   = 'Dirichlet';
-        casedef.BC{jBC}.data.bcval_v = U_chosen;
-        jBC = jBC+1;
-        casedef.BC{jBC}.zoneID = 'ZUIDRAND';
-        casedef.BC{jBC}.kind_u   = 'Dirichlet';
-        casedef.BC{jBC}.data.bcval_u = U_chosen;
-        casedef.BC{jBC}.kind_v   = 'Dirichlet';
-        casedef.BC{jBC}.data.bcval_v = U_chosen;
-        jBC = jBC+1;
-        casedef.BC{jBC}.zoneID = 'NOORDRAND';
-        casedef.BC{jBC}.kind_u = 'Dirichlet';
-        casedef.BC{jBC}.data.bcval_u = U_chosen;
-        casedef.BC{jBC}.kind_v  = 'Dirichlet';
-        casedef.BC{jBC}.data.bcval_v = U_chosen;
-end
-
-
 % Set up iteration parameters
-casedef.iteration.maxniter = 10; 
-casedef.iteration.TTol     = 1e-6;
-casedef.iteration.dt       = 50;
+casedef.iteration.maxniter = maxniter; 
+casedef.iteration.tol      = tol;
+casedef.iteration.dt       = dt;
 
-% Call solver
-result = examplesolver5(casedef);
-set(U_diff,abs(U_diff.data-result.U.data));
+%% Call solver
+switch case_def
+    case 'advection-diffusion'
+        result = examplesolver(casedef);
+        disp("Max norm error: ")
+        display(result.TResnorm)
+    case 'advection-diffusion-fixed-pressure'
+        result = examplesolver4(casedef);
+        disp("Number of false time steps: ")
+        display(result.steps)
+        disp("End time: ")
+        display(result.time)
+        disp("Max norm error: ")
+        display(result.UResnorm)
+    case 'MMS'
+        result = examplesolver5(casedef);
+        set(U_diff,abs(U_diff.data-result.U.data));
+        disp("Number of false time steps: ")
+        display(result.steps)
+        disp("End time: ")
+        display(result.time)
+        disp("Max norm error: ")
+        display(result.UResnorm)
+end
 
 normal = Field(casedef.dom.allFaces,1);
 tangent = Field(casedef.dom.allFaces,1);
@@ -202,21 +232,28 @@ set(normal,[casedef.dom.fNormal]);
 set(tangent,[casedef.dom.fTangent]);
 set(xi,[casedef.dom.fXi]);
 
-%% Plot result
-%figure; hold on; axis off; axis equal; colormap(jet(50));
-%colorbar
-%scale = 'lin'; lw = 1;
-%fvmplotfield(result.U,scale,lw,1); % 1 plots u, 2 plots v
-%fvmplotmesh(casedef.dom,lw);
-display("Number of false time steps: ")
-display(result.steps)
-display("End time: ")
-display(result.time)
-display("Max norm error: ")
-display(result.UResnorm)
-%Uoost = restrictto(U,getzone(casedef.dom,'OOSTRAND'));
-%fvmplotvectorfield(Uoost,lw);
-%fvmplotmesh(casedef.dom,lw);
+%% Plot results: Solution plot
+figure; hold on; axis off; axis equal; colormap(jet(50)); colorbar; scale = 'lin'; lw = 1;
+switch case_def
+    case 'advection-diffusion'
+        title("Temperature distribution")
+        fvmplotfield(result.T,scale,lw);
+    case 'advection-diffusion-fixed-pressure'
+        subplot(1,2,1); colorbar
+        title("U_x")
+        fvmplotfield(result.U,scale,lw,1); 
+        subplot(1,2,2); colorbar
+        title("U_y")
+        fvmplotfield(result.U,scale,lw,2); 
+    case 'MMS'
+        subplot(1,2,1); colorbar
+        title("U_x")
+        fvmplotfield(result.U,scale,lw,1); 
+        subplot(1,2,2); colorbar
+        titlme("U_y")
+        fvmplotfield(result.U,scale,lw,2);
+end
+fvmplotmesh(casedef.dom,lw);
 %fvmplotvectorfield(normal,lw);
 %fvmplotvectorfield(tangent,lw);
 %fvmplotvectorfield(xi,lw);
@@ -224,46 +261,114 @@ display(result.UResnorm)
 %fvmplotfacenumbers(casedef.dom,8);
 %fvmplotvertexnumbers(casedef.dom,8);
 
-%% Compare analtical
-figure; hold on; axis off; axis equal; colormap(jet(50));
-colorbar
-scale = 'lin'; lw = 1;
+%% Plot results: MMS comparison plots
+if strcmp(case_def,'MMS')
+    figure; hold on; axis off; axis equal; colormap(jet(50)); colorbar; scale = 'lin'; lw = 1;
 
-subplot(2,3,1) % Computed solution X
-colorbar
-fvmplotfield(result.U,scale,lw,1);
-%fvmplotmesh(casedef.dom,lw);
-title('U_x code')
+    subplot(2,3,1); colorbar; % Computed solution X
+    fvmplotfield(result.U,scale,lw,1);
+    %fvmplotmesh(casedef.dom,lw);
+    title('U_x code')
 
-subplot(2,3,4) % Computed solution Y
-colorbar
-fvmplotfield(result.U,scale,lw,2);
-%fvmplotmesh(casedef.dom,lw);
-title('U_y code')
+    subplot(2,3,4); colorbar; % Computed solution Y
+    fvmplotfield(result.U,scale,lw,2);
+    %fvmplotmesh(casedef.dom,lw);
+    title('U_y code')
 
-subplot(2,3,2) % Analytical solution X
-colorbar
-fvmplotfield(U_sol,scale,lw,1);
-%fvmplotmesh(casedef.dom,lw);
-title('U_x analytical')
+    subplot(2,3,2); colorbar; % Analytical solution X
+    fvmplotfield(U_sol,scale,lw,1);
+    %fvmplotmesh(casedef.dom,lw);
+    title('U_x analytical')
 
-subplot(2,3,5) % Analytical solution Y
-colorbar
-fvmplotfield(U_sol,scale,lw,2);
-%fvmplotmesh(casedef.dom,lw);
-title('U_y analytical')
+    subplot(2,3,5); colorbar; % Analytical solution Y
+    fvmplotfield(U_sol,scale,lw,2);
+    %fvmplotmesh(casedef.dom,lw);
+    title('U_y analytical')
 
-subplot(2,3,3) % Error X
-colorbar
-fvmplotfield(U_diff,scale,lw,1);
-%fvmplotmesh(casedef.dom,lw);
-title('U_x error')
+    subplot(2,3,3); colorbar; % Error X
+    fvmplotfield(U_diff,scale,lw,1);
+    %fvmplotmesh(casedef.dom,lw);
+    title('U_x error')
 
-subplot(2,3,6) % Error Y
-colorbar
-fvmplotfield(U_diff,scale,lw,2);
-%fvmplotmesh(casedef.dom,lw);
-title('U_y error')
+    subplot(2,3,6); colorbar; % Error Y
+    fvmplotfield(U_diff,scale,lw,2);
+    %fvmplotmesh(casedef.dom,lw);
+    title('U_y error')
+end
+
+%% Plot results: plot section
+switch case_def
+    case 'advection-diffusion'
+        figure
+        Lx = xAxis(1);
+        Uvalues = uValue;
+        Pe = Lx*Uvalues*1/(casedef.material.k);
+        ind0 = ceil(nCy/2); step = nCy*(0:1:(nCx-1)); indices = ind0 + step;
+        leg = {}; leg2 = {};
+        [XX,T] = plotSection(casedef.dom.cCoord,result.T.data,indices,'x',2);
+        leg{1} = strcat('U_x = ', num2str(Uvalues), ', Pe = ',num2str(Pe));
+        lgd = legend(leg); lgd.Location = 'northwest';
+        grid on  
+        xlabel("x")
+        ylabel("T")
+    case 'advection-diffusion-fixed-pressure'
+        figure
+        pValues = pIn-pOut;
+        ind0 = nCy*ceil(nCx/2)+1;
+        indices = ind0:(ind0+nCy-1);
+        leg = {};
+        plotSection(casedef.dom.cCoord,result.U.data(1,:),indices,'y',2);
+        leg{1} = strcat('p_{in} = ', num2str(pValues));
+        lgd = legend(leg);
+        lgd.Location = 'northwest';
+        grid on;
+        xlabel("x")
+        ylabel("U_x")
+end
+        
+%% Plot results: error on analytical soltion
+if analytical
+    switch case_def
+        case 'advection-diffusion'
+            if ~strcmp(boundary_cond,'standard')
+                error("Boundary conditions must be set to standard for analytical solution")
+            else
+                T_anal = @(x,Pe) (exp(Pe*x) - 1 ) ./ (exp(Pe)-1);
+                Lx = xAxis(1); Ly = yAxis(2);
+                x0 = Lx/nCx/2; dx = Lx/nCx; xL = x0 + (nCx-1)*dx;
+                x = x0:dx:xL;
+
+                figure
+                Uvalues = [20 60 100];
+                Pe = Lx*Uvalues*1/(casedef.material.k);
+                ind0 = ceil(nCy/2); step = nCy*(0:1:(nCx-1)); indices = ind0 + step;
+                leg = {}; leg2 = {};
+                cntr = 1;
+                for Ux = Uvalues
+                    set(U,[Ux*ones(1,U.elcountzone);0*ones(1,U.elcountzone)]);
+                    casedef.vars.U = U;                    
+                    result = examplesolver(casedef);
+                    subplot(1,2,1); hold on;
+                    [XX,T] = plotSection(casedef.dom.cCoord,result.T.data,indices,'x',2);
+                    leg{2*cntr-1} = strcat('U_x = ', num2str(Ux), ', Pe = ',num2str(Pe(cntr)));
+                    T_anal_x = T_anal(x,Pe(cntr));
+                    plot(x,T_anal_x,'--','LineWidth',1)
+                    leg{2*cntr} = strcat('Analytic: U_x = ', num2str(Ux), ', Pe = ',num2str(Pe(cntr)));
+                    subplot(1,2,2); hold on;
+                    stem(x,T-T_anal_x)
+                    leg2{cntr} = strcat('Analytic: U_x = ', num2str(Ux), ', Pe = ',num2str(Pe(cntr)));
+                    cntr = cntr + 1;
+                end
+                subplot(1,2,1)
+                lgd = legend(leg); lgd.Location = 'northwest';
+                grid on
+                subplot(1,2,2)
+                xlabel('x'); ylabel('error');
+                lgd = legend(leg2); lgd.Location = 'southwest';
+                grid on
+            end
+    end
+end
 
 
 

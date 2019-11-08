@@ -185,7 +185,7 @@ while iterate
    % Check tolerance and iteration count
    TRes = b-A*x;
    TResnorm = norm(TRes);         
-   if TResnorm < casedef.iteration.TTol
+   if TResnorm < casedef.iteration.tol
       Tconverged = true;
       iterate = false;
    elseif niter > casedef.iteration.maxniter

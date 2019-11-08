@@ -141,7 +141,7 @@ end
 
 % Set up iteration parameters
 casedef.iteration.maxniter = 10; 
-casedef.iteration.TTol     = 1e-6;
+casedef.iteration.tol      = 1e-6;
 casedef.iteration.dt       = 50;
 
 % Call solver
