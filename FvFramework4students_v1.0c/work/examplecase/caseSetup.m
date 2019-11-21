@@ -29,11 +29,10 @@ boundary_cond = 'standard';
 analytical = 1;
 
 % Mesh parameters (are ignored if mesh_def is set)
-nCx = 100; nCy = 100; % Number of cells
+nCx = 20; nCy = 20; % Number of cells
 origin = [0, 0]; % Origin of the mesh
 xAxis = [1, 0]; yAxis = [0, 1]; % x-axis and y-axis direction
 skewX = 1.00; skewY = 1.00; % Mesh skewness
-
 
 % Initial fields (are ignored if init_velocity_field is set)
 uValue = 0;
@@ -66,9 +65,10 @@ pBC_values = [pIn, pOut, 0, 0];
 
 % Iteration parameters
 maxniter_solver = 1000;
-maxniter_stepping = 1000;
+maxniter_stepping = 100;
 tol      = 1e-6;
 dt       = 50;
+alpha    = 0.1; % Relaxation
 
 %% Case setup
 % Creation of the mesh   
@@ -94,7 +94,9 @@ U_sol = Field(casedef.dom.allCells,1);     % Velocity [m/s]
 U_diff = Field(casedef.dom.allCells,1);    % Error velocity [m/s] 
 % Pressure field
 P = Field(casedef.dom.allCells,0);     % Pressure [Pa] 
-set(P,pValue*ones(1,P.elcountzone));     
+set(P,pValue*ones(1,P.elcountzone));   
+%pvals = [100*ones(1,10) 90*ones(1,10) 80*ones(1,10) 70*ones(1,10) 60*ones(1,10) 50*ones(1,10) 40*ones(1,10) 30*ones(1,10) 20*ones(1,10) 10*ones(1,10) 110*ones(1,10) 0*ones(1,10) 100 90 80 70 60 50 40 30 20 10 100 90 80 70 60 50 40 30 20 10];
+%set(P,pvals);
 casedef.vars.P = P;                    % Save P in the casedef
 
 % Define material properties
@@ -250,6 +252,7 @@ casedef.iteration.maxniter_solver   = maxniter_solver;
 casedef.iteration.maxniter_stepping = maxniter_stepping; 
 casedef.iteration.tol               = tol;
 casedef.iteration.dt                = dt;
+casedef.iteration.alpha             = alpha;
 
 %% Call solver
 switch case_def
@@ -400,7 +403,7 @@ switch case_def
         indices = ind0:(ind0+nCy-1);
         leg = {};
         plotSection(casedef.dom.cCoord,result.U.data(1,:),indices,'y',2);
-        leg{1} = strcat('p_{in} = ', num2str(pIn), 'p_{out} = ', num2str(p_out));
+        leg{1} = strcat('p_{in} = ', num2str(pIn), ', p_{out} = ', num2str(pOut));
         lgd = legend(leg);
         lgd.Location = 'northwest';
         grid on;
@@ -408,10 +411,10 @@ switch case_def
         ylabel("U_x")
         subplot(1,2,2)
         ind0 = ceil(nCy/2);
-        indices = ind0 + nCy(0:(nCx-1));
+        indices = ind0 + nCy*(0:(nCx-1));
         leg = {};
         plotSection(casedef.dom.cCoord,result.P.data,indices,'x',2);
-        leg{1} = strcat('p_{in} = ', num2str(pIn), 'p_{out} = ', num2str(p_out));
+        leg{1} = strcat('p_{in} = ', num2str(pIn), 'p_{out} = ', num2str(pOut));
         lgd = legend(leg);
         lgd.Location = 'northwest';
         grid on;
