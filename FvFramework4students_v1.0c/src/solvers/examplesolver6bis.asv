@@ -224,8 +224,7 @@ while stepping % Loop for (false) time stepping
        % Check tolerance and iteration count (for the system solver)
        URes = bu-Au*xu; VRes = bv-Av*xv;
        UResnorm = norm(URes); VResnorm = norm(VRes);
-       Resnorm = max(UResnorm,VResnorm);
-       disp(Resnorm)
+       Resnorm = max(UResnorm,VResnorm);      
        %if Resnorm < casedef.iteration.tol
           %converged = true;
        %   iterate = false;
@@ -258,8 +257,8 @@ while stepping % Loop for (false) time stepping
     % Given the current iterate of the velocities field (u*,v*), compute
     % the solution of the pressure equation for p'
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    %iterate = true;
-    %niter_solver = 0;
+    iterate = true;
+    niter_solver = 0;
     reset(P_prime,0);
     %while iterate % Loop to compute the solution of the pressure equation
        app = zeros(nC,1); aNbIntp = zeros(2*nIf,1); aNbBoundp = zeros(2*nBf,1); 
@@ -377,8 +376,7 @@ while stepping % Loop for (false) time stepping
        
        % Check tolerance and iteration count (for the system solver)
        PRes = bp-Ap*xp;
-       PResnorm = norm(PRes);   
-       disp(PResnorm)
+       PResnorm = norm(PRes);      
        %if PResnorm < casedef.iteration.tol
           %converged = true;
        %   iterate = false;
@@ -493,7 +491,8 @@ while stepping % Loop for (false) time stepping
     colorbar
     fvmplotfield(U,'linear',1,2); 
      
-    if (max(max(norm(U.data(1,:)-U_old.data(1,:)),norm(U.data(2,:)-U_old.data(2,:))),norm(P_prime.data)) < casedef.iteration.tol) || (time/dt >= maxNbTimeSteps)
+    
+    if (max(norm(U.data(1,:)-U_old.data(1,:)),norm(U.data(2,:)-U_old.data(2,:))) < casedef.iteration.tol) || (time/dt >= maxNbTimeSteps)
         stepping = false;
         if time/dt >= maxNbTimeSteps
             disp("maximum number of time steps reached")
