@@ -41,6 +41,7 @@ vValue = 0;
 % Pressure difference 
 pIn = 50; pOut = 0;
 pValue = (pIn+pOut)/2;
+pValue = 0;
 
 % Material properties
 % Define material properties
@@ -278,8 +279,8 @@ switch case_def
         disp("Max norm error: ")
         display(result.UResnorm)
     case 'odd-even-decoupling'
-        result = examplesolver6(casedef);
-        %result = examplesolver6bis(casedef);
+        %result = examplesolver6(casedef);
+        result = examplesolver6bis(casedef);
         disp("Number of false time steps: ")
         display(result.steps)
         disp("End time: ")

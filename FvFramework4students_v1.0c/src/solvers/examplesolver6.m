@@ -405,6 +405,11 @@ while stepping % Loop for (false) time stepping
     fvmplotfield(P,'linear',1);  
     set(P,P.data + alpha*P_prime.data)
     Udata = U.data;
+    figure(2)
+    subplot(1,2,2)
+    title("newP")
+    colorbar
+    fvmplotfield(P,'linear',1); 
     for i = 1:nIf
         nb1 = fNbC(2*i-1); nb2 = fNbC(2*i);
         l = fXiLamba(i); Af = fArea(i);
@@ -418,7 +423,7 @@ while stepping % Loop for (false) time stepping
         % Note: the first nIf/2 faces lie along y.
         % See paper collocated, question what about Af???
         if i <= ceil(nIf/2) % Face along y
-           %dX = cCoord(1,nb2)-cCoord(1,nb1);           
+           %dX = cCoord(1,nb2)-cCoord(1,nb1);
            Udata(1,nb1) = Udata(1,nb1) - Pf*Af/(rho*apuNb1);
            Udata(1,nb2) = Udata(1,nb2) + Pf*Af/(rho*apuNb2);
         else % Face along x
@@ -427,12 +432,13 @@ while stepping % Loop for (false) time stepping
            Udata(2,nb2) = Udata(2,nb2) + Pf*Af/(rho*apvNb2);
         end 
     end
+    
     for i = 1:nBf
         nb1 = fNbC(2*i-1 + 2*nIf); nb2 = fNbC(2*i + 2*nIf);
         l = fXiLamba(i + nIf); Af = fArea(i + nIf); Xif = norm(Xi(:,i + nIf));
         %fVol = l*cVol(nb1)+(1-l)*cVol(nb2); % Volume of the shifted control cell
         apuNb1 = apu(nb1); apvNb1 = apv(nb1); 
-        apuNb2 = apu(nb2); apvNb2 = apv(nb2); 
+        %apuNb2 = apu(nb2); apvNb2 = apv(nb2); 
         %apuf = l*apuNb1 + (1-l)*apuNb2;
         %apvf = l*apvNb1 + (1-l)*apvNb2;
         P1 = P_prime.data(:,nb1); P2 = P_prime.data(:,nb2);
@@ -484,12 +490,7 @@ while stepping % Loop for (false) time stepping
     title("U_{2,corrected}")
     colorbar
     fvmplotfield(U,'linear',1,2); 
-    
-    figure(2)
-    subplot(1,2,2)
-    title("newP")
-    colorbar
-    fvmplotfield(P,'linear',1);  
+     
     
     if (max(norm(U.data(1,:)-U_old.data(1,:)),norm(U.data(2,:)-U_old.data(2,:))) < casedef.iteration.tol) || (time/dt >= maxNbTimeSteps)
         stepping = false;

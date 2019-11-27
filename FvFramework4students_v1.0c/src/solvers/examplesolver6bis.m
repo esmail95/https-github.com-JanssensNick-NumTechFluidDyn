@@ -8,7 +8,7 @@
 % by Frederik Rogiers
 %
 %==========================================================================
-function result = examplesolver6(casedef)
+function result = examplesolver6bis(casedef)
 
 dom = casedef.dom;
 
@@ -74,17 +74,15 @@ while stepping % Loop for (false) time stepping
     % Given the current iterate of the pressure field, compute the 
     % solution of the momentum equation for u* and v*
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    iterate = true;
-    niter_solver = 0;
-    
+    %iterate = true;
+    %niter_solver = 0;
     %while iterate % Loop to compute current solution of the momentum equation
-    
        apu = zeros(nC,1); aNbIntu = zeros(2*nIf,1); aNbBoundu = zeros(2*nBf,1); 
        bu = zeros(nC,1);
        apv = zeros(nC,1); aNbIntv = zeros(2*nIf,1); aNbBoundv = zeros(2*nBf,1); 
        bv = zeros(nC,1);
        % Update iteration counter
-       niter_solver = niter_solver+1;
+       %niter_solver = niter_solver+1;
        % Set all terms to zero
        reset(eqn_u); reset(eqn_v);
        
@@ -262,9 +260,7 @@ while stepping % Loop for (false) time stepping
     iterate = true;
     niter_solver = 0;
     reset(P_prime,0);
-    
     %while iterate % Loop to compute the solution of the pressure equation
-        
        app = zeros(nC,1); aNbIntp = zeros(2*nIf,1); aNbBoundp = zeros(2*nBf,1); 
        bp = zeros(nC,1);
        % Update iteration counter
@@ -292,15 +288,15 @@ while stepping % Loop for (false) time stepping
           if i <= ceil(nIf/2) % Face along y
              dX = cCoord(1,nb2)-cCoord(1,nb1);
              app(nb1) = app(nb1) + fVol*Af/(rho*dX*apuf); 
-             app(nb2) = app(nb2) - fVol*Af/(rho*dX*apuf); 
+             app(nb2) = app(nb2) + fVol*Af/(rho*dX*apuf); % sign flip
              aNbIntp(2*i-1) = aNbIntp(2*i-1) - fVol*Af/(rho*dX*apuf); % Upper diagonal
-             aNbIntp(2*i) = aNbIntp(2*i) + fVol*Af/(rho*dX*apuf); % Lower diagonal
+             aNbIntp(2*i) = aNbIntp(2*i) - fVol*Af/(rho*dX*apuf); % Lower diagonal % sign flip
           else % Face along x
              dY = cCoord(2,nb2)-cCoord(2,nb1);
              app(nb1) = app(nb1) + fVol*Af/(rho*dY*apvf); 
-             app(nb2) = app(nb2) - fVol*Af/(rho*dY*apvf); 
+             app(nb2) = app(nb2) + fVol*Af/(rho*dY*apvf); % sign flip
              aNbIntp(2*i-1) = aNbIntp(2*i-1) - fVol*Af/(rho*dY*apvf);
-             aNbIntp(2*i) = aNbIntp(2*i) + fVol*Af/(rho*dY*apvf);
+             aNbIntp(2*i) = aNbIntp(2*i) - fVol*Af/(rho*dY*apvf); % sign flip
           end
        end  
 
@@ -323,19 +319,19 @@ while stepping % Loop for (false) time stepping
             % Determine to which boundary the face belongs
             if ismember(i + nIf,ranges(1,j):ranges(2,j)) && boundaryFound == 0
                 boundaryFound = 1;
-                switch BC{j}.kind_u
+                switch BC{j}.kind_p
                     case 'Dirichlet' 
                         % Note: the first nBf/2 faces lie along y. Note
                         % that dXa and dY may become negative depending on
                         % the boundary.                       
                         if i <= ceil(nBf/2) % Face along y
-                           dX = cCoord(1,nb2)-cCoord(1,nb1);
-                           app(nb1) = app(nb1) - fVol*Af/(rho*dX*apuNb1); 
-                           aNbBoundp(2*i-1) = aNbBoundp(2*i-1) + fVol*Af/(rho*dX*apuNb1);
+                           dX = abs(cCoord(1,nb2)-cCoord(1,nb1));
+                           app(nb1) = app(nb1) + fVol*Af/(rho*dX*apuNb1); % sign flip
+                           aNbBoundp(2*i-1) = aNbBoundp(2*i-1) - fVol*Af/(rho*dX*apuNb1); % sign flip
                         else % Face along x
-                           dY = cCoord(2,nb2)-cCoord(2,nb1);
-                           app(nb1) = app(nb1) - fVol*Af/(rho*dY*apvNb1); 
-                           aNbBoundp(2*i-1) = aNbBoundp(2*i-1) + fVol*Af/(rho*dY*apvNb1);
+                           dY = abs(cCoord(2,nb2)-cCoord(2,nb1));
+                           app(nb1) = app(nb1) + fVol*Af/(rho*dY*apvNb1); 
+                           aNbBoundp(2*i-1) = aNbBoundp(2*i-1) - fVol*Af/(rho*dY*apvNb1);
                         end
                         app(nb2) = l;
                         aNbBoundp(2*i) = 1-l; % Lower diagonal
@@ -353,13 +349,13 @@ while stepping % Loop for (false) time stepping
                         % that dXa nd dY may become negative depending on
                         % the boundary.
                         if i <= ceil(nBf/2) % Face along y
-                           dX = cCoord(1,nb2)-cCoord(1,nb1);
-                           app(nb1) = app(nb1) - fVol*Af/(rho*dX*apuNb1); 
-                           aNbBoundp(2*i-1) = aNbBoundp(2*i-1) + fVol*Af/(rho*dX*apuNb1);
+                           dX = abs(cCoord(1,nb2)-cCoord(1,nb1));
+                           app(nb1) = app(nb1) + fVol*Af/(rho*dX*apuNb1); 
+                           aNbBoundp(2*i-1) = aNbBoundp(2*i-1) - fVol*Af/(rho*dX*apuNb1);
                         else % Face along x
-                           dY = cCoord(2,nb2)-cCoord(2,nb1);
-                           app(nb1) = app(nb1) - fVol*Af/(rho*dY*apvNb1); 
-                           aNbBoundp(2*i-1) = aNbBoundp(2*i-1) + fVol*Af/(rho*dY*apvNb1);
+                           dY = abs(cCoord(2,nb2)-cCoord(2,nb1));
+                           app(nb1) = app(nb1) + fVol*Af/(rho*dY*apvNb1); 
+                           aNbBoundp(2*i-1) = aNbBoundp(2*i-1) - fVol*Af/(rho*dY*apvNb1);
                         end
                         app(nb2) = -1/Xif;
                         aNbBoundp(2*i) = 1/Xif;   
@@ -383,10 +379,10 @@ while stepping % Loop for (false) time stepping
        PResnorm = norm(PRes);      
        %if PResnorm < casedef.iteration.tol
           %converged = true;
-          %iterate = false;
+       %   iterate = false;
        %elseif niter_solver > casedef.iteration.maxniter_solver
           %converged = false;
-          %iterate = false;
+       %   iterate = false;
         %    elseif checkstoprequest(stopmon)
         %       converged = false;
         %       iterate = false;
@@ -409,6 +405,11 @@ while stepping % Loop for (false) time stepping
     fvmplotfield(P,'linear',1);  
     set(P,P.data + alpha*P_prime.data)
     Udata = U.data;
+    figure(2)
+    subplot(1,2,2)
+    title("newP")
+    colorbar
+    fvmplotfield(P,'linear',1); 
     for i = 1:nIf
         nb1 = fNbC(2*i-1); nb2 = fNbC(2*i);
         l = fXiLamba(i); Af = fArea(i);
@@ -422,7 +423,7 @@ while stepping % Loop for (false) time stepping
         % Note: the first nIf/2 faces lie along y.
         % See paper collocated, question what about Af???
         if i <= ceil(nIf/2) % Face along y
-           %dX = cCoord(1,nb2)-cCoord(1,nb1);           
+           %dX = cCoord(1,nb2)-cCoord(1,nb1);
            Udata(1,nb1) = Udata(1,nb1) - Pf*Af/(rho*apuNb1);
            Udata(1,nb2) = Udata(1,nb2) + Pf*Af/(rho*apuNb2);
         else % Face along x
@@ -431,12 +432,13 @@ while stepping % Loop for (false) time stepping
            Udata(2,nb2) = Udata(2,nb2) + Pf*Af/(rho*apvNb2);
         end 
     end
+    
     for i = 1:nBf
         nb1 = fNbC(2*i-1 + 2*nIf); nb2 = fNbC(2*i + 2*nIf);
         l = fXiLamba(i + nIf); Af = fArea(i + nIf); Xif = norm(Xi(:,i + nIf));
         %fVol = l*cVol(nb1)+(1-l)*cVol(nb2); % Volume of the shifted control cell
         apuNb1 = apu(nb1); apvNb1 = apv(nb1); 
-        apuNb2 = apu(nb2); apvNb2 = apv(nb2); 
+        %apuNb2 = apu(nb2); apvNb2 = apv(nb2); 
         %apuf = l*apuNb1 + (1-l)*apuNb2;
         %apvf = l*apvNb1 + (1-l)*apvNb2;
         P1 = P_prime.data(:,nb1); P2 = P_prime.data(:,nb2);
@@ -460,14 +462,18 @@ while stepping % Loop for (false) time stepping
                 switch BC{j}.kind_u
                     case 'Dirichlet'
                         phi_star_u = (BC{j}.data.bcval_u - l*Udata(1,nb1))/(1-l);
+                        %phi_star_u = (- l*Udata(1,nb1))/(1-l);
                         Udata(1,nb2) = phi_star_u;
                         phi_star_v = (BC{j}.data.bcval_v - l*Udata(2,nb1))/(1-l);
-                        Udata(1,nb2) = phi_star_v;                        
+                        %phi_star_v = (- l*Udata(2,nb1))/(1-l);
+                        Udata(2,nb2) = phi_star_v;                        
                     case 'Neumann'
                         phi_star_u = -(BC{j}.data.bcval_u*Xif - Udata(1,nb1));
+                        %phi_star_u = Udata(1,nb1);
                         Udata(1,nb2) = phi_star_u;
                         phi_star_v = -(BC{j}.data.bcval_v*Xif - Udata(2,nb1));
-                        Udata(1,nb2) = phi_star_v;                                                
+                        %phi_star_v = Udata(2,nb1);
+                        Udata(2,nb2) = phi_star_v;                                                
                 end
             end
         end     
@@ -484,12 +490,7 @@ while stepping % Loop for (false) time stepping
     title("U_{2,corrected}")
     colorbar
     fvmplotfield(U,'linear',1,2); 
-    
-    figure(2)
-    subplot(1,2,2)
-    title("newP")
-    colorbar
-    fvmplotfield(P,'linear',1);  
+     
     
     if (max(norm(U.data(1,:)-U_old.data(1,:)),norm(U.data(2,:)-U_old.data(2,:))) < casedef.iteration.tol) || (time/dt >= maxNbTimeSteps)
         stepping = false;
