@@ -29,7 +29,7 @@ boundary_cond = 'standard';
 analytical = 1;
 
 % Mesh parameters (are ignored if mesh_def is set)
-nCx = 20; nCy = 20; % Number of cells
+nCx = 10; nCy = 10; % Number of cells
 origin = [0, 0]; % Origin of the mesh
 xAxis = [1, 0]; yAxis = [0, 1]; % x-axis and y-axis direction
 skewX = 1.00; skewY = 1.00; % Mesh skewness
@@ -68,7 +68,7 @@ maxniter_solver = 1000;
 maxniter_stepping = 100;
 tol      = 1e-6;
 dt       = 50;
-alpha    = 0.1; % Relaxation
+alpha    = 0.5; % Relaxation
 
 %% Case setup
 % Creation of the mesh   
@@ -279,6 +279,7 @@ switch case_def
         display(result.UResnorm)
     case 'odd-even-decoupling'
         result = examplesolver6(casedef);
+        %result = examplesolver6bis(casedef);
         disp("Number of false time steps: ")
         display(result.steps)
         disp("End time: ")

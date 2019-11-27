@@ -76,7 +76,9 @@ while stepping % Loop for (false) time stepping
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     iterate = true;
     niter_solver = 0;
-    while iterate % Loop to compute current solution of the momentum equation
+    
+    %while iterate % Loop to compute current solution of the momentum equation
+    
        apu = zeros(nC,1); aNbIntu = zeros(2*nIf,1); aNbBoundu = zeros(2*nBf,1); 
        bu = zeros(nC,1);
        apv = zeros(nC,1); aNbIntv = zeros(2*nIf,1); aNbBoundv = zeros(2*nBf,1); 
@@ -225,23 +227,23 @@ while stepping % Loop for (false) time stepping
        URes = bu-Au*xu; VRes = bv-Av*xv;
        UResnorm = norm(URes); VResnorm = norm(VRes);
        Resnorm = max(UResnorm,VResnorm);      
-       if Resnorm < casedef.iteration.tol
+       %if Resnorm < casedef.iteration.tol
           %converged = true;
-          iterate = false;
-       elseif niter_solver > casedef.iteration.maxniter_solver
+       %   iterate = false;
+       %elseif niter_solver > casedef.iteration.maxniter_solver
           %converged = false;
-          iterate = false;
+       %   iterate = false;
         %    elseif checkstoprequest(stopmon)
         %       converged = false;
         %       iterate = false;
-       else
+       %else
           %xu = Au\bu; % Direct sparse solver.
                    % Alternatives: gmres, bicgstabb, ...
           %xv = Av\bv;
           x = [Au\bu,Av\bv];
           set(U,x'); % Put algebraic solution in the Field
-       end
-    end % iterate
+       %end
+    %end % iterate
     
     figure(1)
     subplot(2,2,1)
@@ -260,7 +262,9 @@ while stepping % Loop for (false) time stepping
     iterate = true;
     niter_solver = 0;
     reset(P_prime,0);
-    while iterate % Loop to compute the solution of the pressure equation
+    
+    %while iterate % Loop to compute the solution of the pressure equation
+        
        app = zeros(nC,1); aNbIntp = zeros(2*nIf,1); aNbBoundp = zeros(2*nBf,1); 
        bp = zeros(nC,1);
        % Update iteration counter
@@ -288,15 +292,15 @@ while stepping % Loop for (false) time stepping
           if i <= ceil(nIf/2) % Face along y
              dX = cCoord(1,nb2)-cCoord(1,nb1);
              app(nb1) = app(nb1) + fVol*Af/(rho*dX*apuf); 
-             app(nb2) = app(nb2) + fVol*Af/(rho*dX*apuf); % sign flip
+             app(nb2) = app(nb2) - fVol*Af/(rho*dX*apuf); 
              aNbIntp(2*i-1) = aNbIntp(2*i-1) - fVol*Af/(rho*dX*apuf); % Upper diagonal
-             aNbIntp(2*i) = aNbIntp(2*i) - fVol*Af/(rho*dX*apuf); % Lower diagonal % sign flip
+             aNbIntp(2*i) = aNbIntp(2*i) + fVol*Af/(rho*dX*apuf); % Lower diagonal
           else % Face along x
              dY = cCoord(2,nb2)-cCoord(2,nb1);
              app(nb1) = app(nb1) + fVol*Af/(rho*dY*apvf); 
-             app(nb2) = app(nb2) + fVol*Af/(rho*dY*apvf); % sign flip
+             app(nb2) = app(nb2) - fVol*Af/(rho*dY*apvf); 
              aNbIntp(2*i-1) = aNbIntp(2*i-1) - fVol*Af/(rho*dY*apvf);
-             aNbIntp(2*i) = aNbIntp(2*i) - fVol*Af/(rho*dY*apvf); % sign flip
+             aNbIntp(2*i) = aNbIntp(2*i) + fVol*Af/(rho*dY*apvf);
           end
        end  
 
@@ -319,19 +323,19 @@ while stepping % Loop for (false) time stepping
             % Determine to which boundary the face belongs
             if ismember(i + nIf,ranges(1,j):ranges(2,j)) && boundaryFound == 0
                 boundaryFound = 1;
-                switch BC{j}.kind_p
+                switch BC{j}.kind_u
                     case 'Dirichlet' 
                         % Note: the first nBf/2 faces lie along y. Note
                         % that dXa and dY may become negative depending on
                         % the boundary.                       
                         if i <= ceil(nBf/2) % Face along y
-                           dX = abs(cCoord(1,nb2)-cCoord(1,nb1));
-                           app(nb1) = app(nb1) + fVol*Af/(rho*dX*apuNb1); % sign flip
-                           aNbBoundp(2*i-1) = aNbBoundp(2*i-1) - fVol*Af/(rho*dX*apuNb1); % sign flip
+                           dX = cCoord(1,nb2)-cCoord(1,nb1);
+                           app(nb1) = app(nb1) - fVol*Af/(rho*dX*apuNb1); 
+                           aNbBoundp(2*i-1) = aNbBoundp(2*i-1) + fVol*Af/(rho*dX*apuNb1);
                         else % Face along x
-                           dY = abs(cCoord(2,nb2)-cCoord(2,nb1));
-                           app(nb1) = app(nb1) + fVol*Af/(rho*dY*apvNb1); 
-                           aNbBoundp(2*i-1) = aNbBoundp(2*i-1) - fVol*Af/(rho*dY*apvNb1);
+                           dY = cCoord(2,nb2)-cCoord(2,nb1);
+                           app(nb1) = app(nb1) - fVol*Af/(rho*dY*apvNb1); 
+                           aNbBoundp(2*i-1) = aNbBoundp(2*i-1) + fVol*Af/(rho*dY*apvNb1);
                         end
                         app(nb2) = l;
                         aNbBoundp(2*i) = 1-l; % Lower diagonal
@@ -349,13 +353,13 @@ while stepping % Loop for (false) time stepping
                         % that dXa nd dY may become negative depending on
                         % the boundary.
                         if i <= ceil(nBf/2) % Face along y
-                           dX = abs(cCoord(1,nb2)-cCoord(1,nb1));
-                           app(nb1) = app(nb1) + fVol*Af/(rho*dX*apuNb1); 
-                           aNbBoundp(2*i-1) = aNbBoundp(2*i-1) - fVol*Af/(rho*dX*apuNb1);
+                           dX = cCoord(1,nb2)-cCoord(1,nb1);
+                           app(nb1) = app(nb1) - fVol*Af/(rho*dX*apuNb1); 
+                           aNbBoundp(2*i-1) = aNbBoundp(2*i-1) + fVol*Af/(rho*dX*apuNb1);
                         else % Face along x
-                           dY = abs(cCoord(2,nb2)-cCoord(2,nb1));
-                           app(nb1) = app(nb1) + fVol*Af/(rho*dY*apvNb1); 
-                           aNbBoundp(2*i-1) = aNbBoundp(2*i-1) - fVol*Af/(rho*dY*apvNb1);
+                           dY = cCoord(2,nb2)-cCoord(2,nb1);
+                           app(nb1) = app(nb1) - fVol*Af/(rho*dY*apvNb1); 
+                           aNbBoundp(2*i-1) = aNbBoundp(2*i-1) + fVol*Af/(rho*dY*apvNb1);
                         end
                         app(nb2) = -1/Xif;
                         aNbBoundp(2*i) = 1/Xif;   
@@ -377,22 +381,22 @@ while stepping % Loop for (false) time stepping
        % Check tolerance and iteration count (for the system solver)
        PRes = bp-Ap*xp;
        PResnorm = norm(PRes);      
-       if PResnorm < casedef.iteration.tol
+       %if PResnorm < casedef.iteration.tol
           %converged = true;
-          iterate = false;
-       elseif niter_solver > casedef.iteration.maxniter_solver
+          %iterate = false;
+       %elseif niter_solver > casedef.iteration.maxniter_solver
           %converged = false;
-          iterate = false;
+          %iterate = false;
         %    elseif checkstoprequest(stopmon)
         %       converged = false;
         %       iterate = false;
-       else
+       %else
           % Direct sparse solver.
           % Alternatives: gmres, bicgstabb, ...
           xp = Ap\bp;
           set(P_prime,xp'); % Put algebraic solution in the Field
-       end
-    end %iterate
+       %end
+    %end %iterate
     
     %%%%% PART 3: Corrections %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % Given the pressure correction, adjust the current pressure and 
@@ -456,18 +460,14 @@ while stepping % Loop for (false) time stepping
                 switch BC{j}.kind_u
                     case 'Dirichlet'
                         phi_star_u = (BC{j}.data.bcval_u - l*Udata(1,nb1))/(1-l);
-                        %phi_star_u = (- l*Udata(1,nb1))/(1-l);
                         Udata(1,nb2) = phi_star_u;
                         phi_star_v = (BC{j}.data.bcval_v - l*Udata(2,nb1))/(1-l);
-                        %phi_star_v = (- l*Udata(2,nb1))/(1-l);
-                        Udata(2,nb2) = phi_star_v;                        
+                        Udata(1,nb2) = phi_star_v;                        
                     case 'Neumann'
                         phi_star_u = -(BC{j}.data.bcval_u*Xif - Udata(1,nb1));
-                        %phi_star_u = Udata(1,nb1);
                         Udata(1,nb2) = phi_star_u;
                         phi_star_v = -(BC{j}.data.bcval_v*Xif - Udata(2,nb1));
-                        %phi_star_v = Udata(2,nb1);
-                        Udata(2,nb2) = phi_star_v;                                                
+                        Udata(1,nb2) = phi_star_v;                                                
                 end
             end
         end     

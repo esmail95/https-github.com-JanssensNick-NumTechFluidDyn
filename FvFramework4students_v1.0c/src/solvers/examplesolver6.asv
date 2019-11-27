@@ -455,19 +455,17 @@ while stepping % Loop for (false) time stepping
                 boundaryFound = 1;
                 switch BC{j}.kind_u
                     case 'Dirichlet'
-                        phi_star_u = (BC{j}.data.bcval_u - l*Udata(1,nb1))/(1-l);
-                        %phi_star_u = (- l*Udata(1,nb1))/(1-l);
+                        %phi_star_u = (BC{j}.data.bcval_u - l*Udata(1,nb1))/(1-l);
+                        phi_star_u = (- l*Udata(1,nb1))/(1-l);
                         Udata(1,nb2) = phi_star_u;
-                        phi_star_v = (BC{j}.data.bcval_v - l*Udata(2,nb1))/(1-l);
-                        %phi_star_v = (- l*Udata(2,nb1))/(1-l);
-                        Udata(2,nb2) = phi_star_v;                        
+                        %phi_star_v = (BC{j}.data.bcval_v - l*Udata(2,nb1))/(1-l);
+                        phi_star_v = (- l*Udata(2,nb1))/(1-l);
+                        Udata(1,nb2) = phi_star_v;                        
                     case 'Neumann'
                         phi_star_u = -(BC{j}.data.bcval_u*Xif - Udata(1,nb1));
-                        %phi_star_u = Udata(1,nb1);
                         Udata(1,nb2) = phi_star_u;
                         phi_star_v = -(BC{j}.data.bcval_v*Xif - Udata(2,nb1));
-                        %phi_star_v = Udata(2,nb1);
-                        Udata(2,nb2) = phi_star_v;                                                
+                        Udata(1,nb2) = phi_star_v;                                                
                 end
             end
         end     
