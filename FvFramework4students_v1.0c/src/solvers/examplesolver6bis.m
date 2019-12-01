@@ -364,7 +364,7 @@ while stepping % Loop for (false) time stepping
     fvmplotfield(P,'linear',1);  
     
     set(P,P.data + alpha*P_prime.data)
-    Udata = U.data;
+    Ucorr = 0*U.data;
     
     figure(2)
     subplot(1,2,2)
@@ -384,35 +384,32 @@ while stepping % Loop for (false) time stepping
         Pf = l*P1 + (1-l)*P2;
         % Note: the first nIf/2 faces lie along y.
         if i <= ceil(nIf/2) % Face along y
-           Udata(1,nb1) = Udata(1,nb1) - Pf*Af/(rho*apuNb1);
-           Udata(1,nb2) = Udata(1,nb2) + Pf*Af/(rho*apuNb2);
+           Ucorr(1,nb1) = Ucorr(1,nb1) - Pf*Af/(rho*apuNb1);
+           Ucorr(1,nb2) = Ucorr(1,nb2) + Pf*Af/(rho*apuNb2);
         else % Face along x
            %dY = cCoord(2,nb2)-cCoord(2,nb1);
-           Udata(2,nb1) = Udata(2,nb1) - Pf*Af/(rho*apvNb1);
-           Udata(2,nb2) = Udata(2,nb2) + Pf*Af/(rho*apvNb2);
+           Ucorr(2,nb1) = Ucorr(2,nb1) - Pf*Af/(rho*apvNb1);
+           Ucorr(2,nb2) = Ucorr(2,nb2) + Pf*Af/(rho*apvNb2);
         end 
     end
     
     for i = 1:nBf
         nb1 = fNbC(2*i-1 + 2*nIf); nb2 = fNbC(2*i + 2*nIf);
-        l = fXiLamba(i + nIf); Af = fArea(i + nIf); Xif = norm(Xi(:,i + nIf));
+        l = fXiLamba(i + nIf); Af = fArea(i + nIf); % Xif = norm(Xi(:,i + nIf));
         %fVol = l*cVol(nb1)+(1-l)*cVol(nb2); % Volume of the shifted control cell
         apuNb1 = apu(nb1); apvNb1 = apv(nb1); 
-        %apuNb2 = apu(nb2); apvNb2 = apv(nb2); 
-        %apuf = l*apuNb1 + (1-l)*apuNb2;
-        %apvf = l*apvNb1 + (1-l)*apvNb2;
         P1 = P_prime.data(:,nb1); P2 = P_prime.data(:,nb2);
         Pf = l*P1 + (1-l)*P2;
         % Note: the first nIf/2 faces lie along y.
         % See paper collocated, question what about Af???
-        if i <= ceil(nIf/2) % Face along y
+        if i <= ceil(nBf/2) % Face along y
            dX = cCoord(1,nb2)-cCoord(1,nb1);           
-           Udata(1,nb1) = Udata(1,nb1) - sign(dX)*Pf*Af/(rho*apuNb1);
-           %Udata(1,nb2) = Udata(1,nb2) + Pf*Af/(rho*apuNb2);
+           Ucorr(1,nb1) = Ucorr(1,nb1) - sign(dX)*Pf*Af/(rho*apuNb1);
+           %Ucorr(1,nb2) = Ucorr(1,nb2) + Pf*Af/(rho*apuNb2);
         else % Face along x
            dY = cCoord(2,nb2)-cCoord(2,nb1);
-           Udata(2,nb1) = Udata(2,nb1) - sign(dY)*Pf*Af/(rho*apvNb1);
-           %Udata(2,nb2) = Udata(2,nb2) + Pf*Af/(rho*apvNb2);
+           Ucorr(2,nb1) = Ucorr(2,nb1) - sign(dY)*Pf*Af/(rho*apvNb1);
+           %Ucorr(2,nb2) = Ucorr(2,nb2) + Pf*Af/(rho*apvNb2);
         end 
         boundaryFound = 0;
         for j = 1:nbZones
@@ -421,25 +418,29 @@ while stepping % Loop for (false) time stepping
                 boundaryFound = 1;
                 switch BC{j}.kind_u
                     case 'Dirichlet'
-                        phi_star_u = (BC{j}.data.bcval_u - l*Udata(1,nb1))/(1-l);
-                        %phi_star_u = (- l*Udata(1,nb1))/(1-l);
-                        Udata(1,nb2) = phi_star_u;
-                        phi_star_v = (BC{j}.data.bcval_v - l*Udata(2,nb1))/(1-l);
-                        %phi_star_v = (- l*Udata(2,nb1))/(1-l);
-                        Udata(2,nb2) = phi_star_v;                        
+                        %phi_star_u = (BC{j}.data.bcval_u - l*Ucorr(1,nb1))/(1-l);
+                        %phi_star_u = (- l*Ucorr(1,nb1))/(1-l);
+                        %Ucorr(1,nb2) = phi_star_u;
+                        Ucorr(1,nb2) = l*Ucorr(1,nb1)/(1-l);
+                        %phi_star_v = (BC{j}.data.bcval_v - l*Ucorr(2,nb1))/(1-l);
+                        %phi_star_v = (- l*Ucorr(2,nb1))/(1-l);
+                        %Ucorr(2,nb2) = phi_star_v;       
+                        Ucorr(2,nb2) = l*Ucorr(2,nb1)/(1-l);
                     case 'Neumann'
-                        phi_star_u = -(BC{j}.data.bcval_u*Xif - Udata(1,nb1));
-                        %phi_star_u = Udata(1,nb1);
-                        Udata(1,nb2) = phi_star_u;
-                        phi_star_v = -(BC{j}.data.bcval_v*Xif - Udata(2,nb1));
-                        %phi_star_v = Udata(2,nb1);
-                        Udata(2,nb2) = phi_star_v;                                                
+                        %phi_star_u = -(BC{j}.data.bcval_u*Xif - Ucorr(1,nb1));
+                        %phi_star_u = Ucorr(1,nb1);
+                        %Ucorr(1,nb2) = phi_star_u;
+                        Ucorr(1,nb2) = Ucorr(1,nb1);
+                        %phi_star_v = -(BC{j}.data.bcval_v*Xif - Ucorr(2,nb1));
+                        %phi_star_v = Ucorr(2,nb1);
+                        %Ucorr(2,nb2) = phi_star_v;
+                        Ucorr(2,nb2) = Ucorr(2,nb1);
                 end
             end
         end     
     end
     
-    set(U,Udata);
+    set(U,U.data + Ucorr);
     
     figure(1)
     subplot(2,2,3)
