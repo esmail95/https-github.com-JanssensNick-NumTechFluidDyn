@@ -23,14 +23,14 @@ clc
 %   - advection-diffusion with fixed pressure gradient
 %   - verification with method of manufactured solutions
 %   - Pressuree-velocity with odd-even decoupling
-case_def = 'rie-chow'; % 'advection-diffusion', 'advection-diffusion-fixed-pressure', 'MMS', 'odd-even-decoupling', 'rie-chow'
+case_def = 'odd-even-decoupling'; % 'advection-diffusion', 'advection-diffusion-fixed-pressure', 'MMS', 'odd-even-decoupling', 'rie-chow'
 MMS_case = 'example-slides';
 boundary_cond = 'standard'; %'standard'
 p_init = 'none'; %'checkerboard'
 analytical = 1;
 
 % Mesh parameters (are ignored if mesh_def is set)
-nCx = 20; nCy = 20; % Number of cells
+nCx = 10; nCy = 10; % Number of cells
 origin = [0, 0]; % Origin of the mesh
 xAxis = [1, 0]; yAxis = [0, 1]; % x-axis and y-axis direction
 skewX = 1.00; skewY = 1.00; % Mesh skewness

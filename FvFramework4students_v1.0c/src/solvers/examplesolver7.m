@@ -246,26 +246,40 @@ while stepping % Loop for (false) time stepping
        nb1 = fNbC(2*i-1); nb2 = fNbC(2*i);
        l = fXiLamba(i); Af = fArea(i);
        fVol = l*cVol(nb1)+(1-l)*cVol(nb2); % Volume of the shifted control cell
-       U1 = U.data(:,nb1); U2 = U.data(:,nb2);
-       Uf = l*U1 + (1-l)*U2;
-       Unf = dot(Uf,fNormal(:,i));
        apuNb1 = apu(nb1); apvNb1 = apv(nb1); 
        apuNb2 = apu(nb2); apvNb2 = apv(nb2); 
        apuf = l*apuNb1 + (1-l)*apuNb2;
        apvf = l*apvNb1 + (1-l)*apvNb2;
-          
-       bp(nb1) = bp(nb1) - Unf*Af; % - because term brought to RHS
-       bp(nb2) = bp(nb2) + Unf*Af;
-                 
+       P1 = P.data(:,nb1); P2 = P.data(:,nb2);
+       Pf = l*P1 + (1-l)*P2;
        % Note: the first nIf/2 faces lie along y, watch out for the signs.
        if i <= ceil(nIf/2) % Face along y
           dX = cCoord(1,nb2)-cCoord(1,nb1);
+          dPx = (P2-P1)/dX;
+          dPx_ = Pf/dX;
+          U1 = U.data(:,nb1); U2 = U.data(:,nb2);
+          Uf_ = l*U1(1) + (1-l)*U2(1); % Linear interpolation
+          Uf = Uf_ - fVol*(1/apuf)*(dPx-dPx_) ; %Rie-Chow interpolation
+          %Unf = dot(Uf,fNormal(:,i));
+          Unf = Uf;
+          bp(nb1) = bp(nb1) - Unf*Af; % - because term brought to RHS
+          bp(nb2) = bp(nb2) + Unf*Af;
+           
           app(nb1) = app(nb1) + fVol*Af/(rho*dX*apuf); 
           app(nb2) = app(nb2) + fVol*Af/(rho*dX*apuf);
           aNbIntp(2*i-1) = aNbIntp(2*i-1) - fVol*Af/(rho*dX*apuf); % Upper diagonal
           aNbIntp(2*i) = aNbIntp(2*i) - fVol*Af/(rho*dX*apuf); % Lower diagonal
        else % Face along x
           dY = cCoord(2,nb2)-cCoord(2,nb1);
+          dPy = (P2-P1)/dX;
+          dPy_ = Pf/dX;
+          U1 = U.data(:,nb1); U2 = U.data(:,nb2);
+          Uf_ = l*U1(2) + (1-l)*U2(2); % Linear interpolation
+          Uf = Uf_ - fVol*(1/apvf)*(dPy-dPy_) ; %Rie-Chow interpolation
+          %Unf = dot(Uf,fNormal(:,i));
+          Unf = Uf;
+          bp(nb1) = bp(nb1) - Unf*Af; % - because term brought to RHS
+          bp(nb2) = bp(nb2) + Unf*Af;
           app(nb1) = app(nb1) + fVol*Af/(rho*dY*apvf); 
           app(nb2) = app(nb2) + fVol*Af/(rho*dY*apvf); % sign flip
           aNbIntp(2*i-1) = aNbIntp(2*i-1) - fVol*Af/(rho*dY*apvf);
@@ -276,13 +290,17 @@ while stepping % Loop for (false) time stepping
     for i = 1:nBf % Loop over boundary faces
        nb1 = fNbC(2*i-1 + 2*nIf); nb2 = fNbC(2*i + 2*nIf);
        l = fXiLamba(i + nIf); Af = fArea(i + nIf); Xif = norm(Xi(:,i + nIf));
-       U1 = U.data(:,nb1); U2 = U.data(:,nb2);
-       Uf = l*U1 + (1-l)*U2;
-       Unf = dot(Uf,fNormal(:,i + nIf));
+       %U1 = U.data(:,nb1); U2 = U.data(:,nb2);
+       %Uf = l*U1 + (1-l)*U2;
+       %Unf = dot(Uf,fNormal(:,i + nIf));
        %fVol = l*cVol(nb1)+(1-l)*cVol(nb2); % cVol is not included for ghost cells, do not use fvol here!
+       fVol = cVol(nb1); %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
        apuNb1 = apu(nb1); apvNb1 = apv(nb1);
           
-       bp(nb1) = bp(nb1) - Unf*Af; % - because term brought to RHS
+       %bp(nb1) = bp(nb1) - Unf*Af; % - because term brought to RHS
+       
+       P1 = P.data(:,nb1); P2 = P.data(:,nb2);
+       Pf = l*P1 + (1-l)*P2;
           
        boundaryFound = 0;
        for j = 1:nbZones
@@ -295,11 +313,30 @@ while stepping % Loop for (false) time stepping
                      % dX and dY may become negative depending on the
                      % boundary.                       
                      if i <= ceil(nBf/2) % Face along y
-                        %dX = abs(cCoord(1,nb2)-cCoord(1,nb1));
+                        dX = cCoord(1,nb2)-cCoord(1,nb1);
+                        dPx = (P2-P1)/dX;
+                        dPx_ = Pf/dX;
+                        U1 = U.data(:,nb1); U2 = U.data(:,nb2);
+                        Uf_ = l*U1(1) + (1-l)*U2(1); % Linear interpolation
+                        Uf = Uf_ - fVol*(1/apuNb1)*(dPx-dPx_) ; %Rie-Chow interpolation
+                        %Unf = dot(Uf,fNormal(:,i));
+                        Unf = Uf;
+                        bp(nb1) = bp(nb1) - Unf*Af; % - because term brought to RHS
+                         
                         app(nb1) = app(nb1) + Af*Af/(rho*apuNb1); % sign flip
                         aNbBoundp(2*i-1) = aNbBoundp(2*i-1) - Af*Af/(rho*apuNb1); % sign flip
                      else % Face along x
-                        %dY = abs(cCoord(2,nb2)-cCoord(2,nb1));
+                        dY = cCoord(2,nb2)-cCoord(2,nb1);
+                        
+                        dPy = (P2-P1)/dY;
+                        dPy_ = Pf/dY;
+                        U1 = U.data(:,nb1); U2 = U.data(:,nb2);
+                        Uf_ = l*U1(2) + (1-l)*U2(2); % Linear interpolation
+                        Uf = Uf_ - fVol*(1/apvNb1)*(dPy-dPy_) ; %Rie-Chow interpolation
+                        %Unf = dot(Uf,fNormal(:,i));
+                        Unf = Uf;
+                        bp(nb1) = bp(nb1) - Unf*Af; % - because term brought to RHS
+                        
                         app(nb1) = app(nb1) + Af*Af/(rho*apvNb1); 
                         aNbBoundp(2*i-1) = aNbBoundp(2*i-1) - Af*Af/(rho*apvNb1);
                      end
