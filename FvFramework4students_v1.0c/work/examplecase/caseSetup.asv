@@ -23,10 +23,10 @@ clc
 %   - advection-diffusion with fixed pressure gradient
 %   - verification with method of manufactured solutions
 %   - Pressuree-velocity with odd-even decoupling
-case_def = 'rie-chow'; % 'advection-diffusion', 'advection-diffusion-fixed-pressure', 'MMS', 'odd-even-decoupling', 'rie-chow'
+case_def = 'odd-even-decoupling'; % 'advection-diffusion', 'advection-diffusion-fixed-pressure', 'MMS', 'odd-even-decoupling'
 MMS_case = 'example-slides';
 boundary_cond = 'standard'; %'standard'
-p_init = 'none'; %'checkerboard'
+p_init = 'checkerboard';
 analytical = 1;
 
 % Mesh parameters (are ignored if mesh_def is set)
@@ -41,7 +41,7 @@ vValue = 0;
 
 % Pressure difference 
 pIn = 50; pOut = 0;
-pValue = 0; % Initialise constant pressure field
+pValue = 25; % Initialise constant pressure field
 
 % Material properties
 % Define material properties
@@ -99,7 +99,7 @@ set(P,pValue*ones(1,P.elcountzone));
 % Constant pressure gradient
 % pVals = [100*ones(1,10) 90*ones(1,10) 80*ones(1,10) 70*ones(1,10) 60*ones(1,10) 50*ones(1,10) 40*ones(1,10) 30*ones(1,10) 20*ones(1,10) 10*ones(1,10) 110*ones(1,10) 0*ones(1,10) 100 90 80 70 60 50 40 30 20 10 100 90 80 70 60 50 40 30 20 10];
 % Checkerboard:
-if strcmp(p_init,'checkerboard')
+if strcmp(boundary_cond,'checkerboard')
     pVals = 0*P.data;
     for k = 1:(nCx*nCy/2)
         pVals(2*k) = pValue;
@@ -116,15 +116,12 @@ switch case_def
     case 'advection-diffusion'
         casedef.material.k = k; % Thermal conductivity [W/(m K)]
         casedef.material.rho = rho; % density [kg/m^3]
-    case 'advection-diffusion-fixed-pressure' 
+    case 'advection-diffusion-fixed-pressure'
         casedef.material.k = nu; % Thermal conductivity [W/(m K)]
         casedef.material.rho = rho; % density [kg/m^3]
     case 'odd-even-decoupling'
         casedef.material.k = nu; % Thermal conductivity [W/(m K)]
-        casedef.material.rho = rho; % density [kg/m^3]    
-    case 'rie-chow'
-        casedef.material.k = nu; % Thermal conductivity [W/(m K)]
-        casedef.material.rho = rho; % density [kg/m^3]     
+        casedef.material.rho = rho; % density [kg/m^3]        
     otherwise
         casedef.material.k = nu; % Thermal conductivity [W/(m K)]
         casedef.material.rho = rho; % density [kg/m^3]
@@ -204,23 +201,6 @@ switch boundary_cond
                 casedef.BC{jBC}.kind_u = 'Dirichlet'; casedef.BC{jBC}.data.bcval_u = 0;
                 casedef.BC{jBC}.kind_v = 'Dirichlet'; casedef.BC{jBC}.data.bcval_v = 0;
                 casedef.BC{jBC}.kind_p = 'Neumann'; casedef.BC{jBC}.data.bcval_p = 0;
-            case 'rie-chow'
-                jBC = 0; jBC = jBC+1; casedef.BC{jBC}.zoneID = 'WESTRAND'; 
-                casedef.BC{jBC}.kind_u = 'Neumann'; casedef.BC{jBC}.data.bcval_u = 0;
-                casedef.BC{jBC}.kind_v = 'Neumann'; casedef.BC{jBC}.data.bcval_v = 0;
-                casedef.BC{jBC}.kind_p = 'Dirichlet'; casedef.BC{jBC}.data.bcval_p = pIn;
-                jBC = jBC+1; casedef.BC{jBC}.zoneID = 'OOSTRAND';
-                casedef.BC{jBC}.kind_u = 'Neumann'; casedef.BC{jBC}.data.bcval_u = 0;
-                casedef.BC{jBC}.kind_v = 'Neumann'; casedef.BC{jBC}.data.bcval_v = 0;
-                casedef.BC{jBC}.kind_p = 'Dirichlet'; casedef.BC{jBC}.data.bcval_p = pOut;
-                jBC = jBC+1; casedef.BC{jBC}.zoneID = 'ZUIDRAND';
-                casedef.BC{jBC}.kind_u = 'Dirichlet'; casedef.BC{jBC}.data.bcval_u = 0;
-                casedef.BC{jBC}.kind_v = 'Dirichlet'; casedef.BC{jBC}.data.bcval_v = 0;
-                casedef.BC{jBC}.kind_p = 'Neumann'; casedef.BC{jBC}.data.bcval_p = 0;
-                jBC = jBC+1; casedef.BC{jBC}.zoneID = 'NOORDRAND';
-                casedef.BC{jBC}.kind_u = 'Dirichlet'; casedef.BC{jBC}.data.bcval_u = 0;
-                casedef.BC{jBC}.kind_v = 'Dirichlet'; casedef.BC{jBC}.data.bcval_v = 0;
-                casedef.BC{jBC}.kind_p = 'Neumann'; casedef.BC{jBC}.data.bcval_p = 0;
         end
     otherwise
         switch case_def
@@ -275,24 +255,7 @@ switch boundary_cond
                 jBC = jBC+1; casedef.BC{jBC}.zoneID = 'NOORDRAND';
                 casedef.BC{jBC}.kind_u = uBC_names(jBC); casedef.BC{jBC}.data.bcval_u = uBC_values(jBC);
                 casedef.BC{jBC}.kind_v = vBC_names(jBC); casedef.BC{jBC}.data.bcval_v = vBC_values(jBC);
-                casedef.BC{jBC}.kind_p = pBC_names(jBC); casedef.BC{jBC}.data.bcval_p = pBC_values(jBC);
-            case 'rie-chow'
-                jBC = 0; jBC = jBC+1; casedef.BC{jBC}.zoneID = 'WESTRAND'; 
-                casedef.BC{jBC}.kind_u = uBC_names(jBC); casedef.BC{jBC}.data.bcval_u = uBC_values(jBC);
-                casedef.BC{jBC}.kind_v = vBC_names(jBC); casedef.BC{jBC}.data.bcval_v = vBC_values(jBC);
-                casedef.BC{jBC}.kind_p = pBC_names(jBC); casedef.BC{jBC}.data.bcval_p = pBC_values(jBC);
-                jBC = jBC+1; casedef.BC{jBC}.zoneID = 'OOSTRAND';
-                casedef.BC{jBC}.kind_u = uBC_names(jBC); casedef.BC{jBC}.data.bcval_u = uBC_values(jBC);
-                casedef.BC{jBC}.kind_v = vBC_names(jBC); casedef.BC{jBC}.data.bcval_v = vBC_values(jBC);
-                casedef.BC{jBC}.kind_p = pBC_names(jBC); casedef.BC{jBC}.data.bcval_p = pBC_values(jBC);
-                jBC = jBC+1; casedef.BC{jBC}.zoneID = 'ZUIDRAND';
-                casedef.BC{jBC}.kind_u = uBC_names(jBC); casedef.BC{jBC}.data.bcval_u = uBC_values(jBC);
-                casedef.BC{jBC}.kind_v = vBC_names(jBC); casedef.BC{jBC}.data.bcval_v = vBC_values(jBC);
-                casedef.BC{jBC}.kind_p = pBC_names(jBC); casedef.BC{jBC}.data.bcval_p = pBC_values(jBC);
-                jBC = jBC+1; casedef.BC{jBC}.zoneID = 'NOORDRAND';
-                casedef.BC{jBC}.kind_u = uBC_names(jBC); casedef.BC{jBC}.data.bcval_u = uBC_values(jBC);
-                casedef.BC{jBC}.kind_v = vBC_names(jBC); casedef.BC{jBC}.data.bcval_v = vBC_values(jBC);
-                casedef.BC{jBC}.kind_p = pBC_names(jBC); casedef.BC{jBC}.data.bcval_p = pBC_values(jBC);
+                casedef.BC{jBC}.kind_p = pBC_names(jBC); casedef.BC{jBC}.data.bcval_p = pBC_values(jBC);                
         end
 end
 
@@ -327,21 +290,14 @@ switch case_def
         disp("Max norm error: ")
         display(result.UResnorm)
     case 'odd-even-decoupling'
+        %result = examplesolver6(casedef);
         result = examplesolver6bis(casedef);
         disp("Number of false time steps: ")
         display(result.steps)
         disp("End time: ")
         display(result.time)
         disp("Max norm error: ")
-        display(result.UResnorm) 
-    case 'rie-chow'
-        result = examplesolver7(casedef);
-        disp("Number of false time steps: ")
-        display(result.steps)
-        disp("End time: ")
-        display(result.time)
-        disp("Max norm error: ")
-        display(result.UResnorm)
+        display(result.UResnorm)        
 end
 
 normal = Field(casedef.dom.allFaces,1);
@@ -372,16 +328,6 @@ switch case_def
         title("U_y")
         fvmplotfield(result.U,scale,lw,2);
     case 'odd-even-decoupling'
-        subplot(1,3,1); colorbar
-        title("U_x")
-        fvmplotfield(result.U,scale,lw,1); 
-        subplot(1,3,2); colorbar
-        title("U_y")
-        fvmplotfield(result.U,scale,lw,2);
-        subplot(1,3,3); colorbar
-        title("P")
-        fvmplotfield(result.P,scale,lw);
-    case 'rie-chow'
         subplot(1,3,1); colorbar
         title("U_x")
         fvmplotfield(result.U,scale,lw,1); 
@@ -487,30 +433,6 @@ switch case_def
         grid on;
         xlabel("x")
         ylabel("p")
-    case 'rie-chow'
-        figure
-        subplot(1,2,1)
-        ind0 = nCy*ceil(nCx/2)+1;
-        indices = ind0:(ind0+nCy-1);
-        leg = {};
-        plotSection(casedef.dom.cCoord,result.U.data(1,:),indices,'y',2);
-        leg{1} = strcat('p_{in} = ', num2str(pIn), ', p_{out} = ', num2str(pOut));
-        lgd = legend(leg);
-        lgd.Location = 'northwest';
-        grid on;
-        xlabel("x")
-        ylabel("U_x")
-        subplot(1,2,2)
-        ind0 = ceil(nCy/2);
-        indices = ind0 + nCy*(0:(nCx-1));
-        leg = {};
-        plotSection(casedef.dom.cCoord,result.P.data,indices,'x',2);
-        leg{1} = strcat('p_{in} = ', num2str(pIn), 'p_{out} = ', num2str(pOut));
-        lgd = legend(leg);
-        lgd.Location = 'northwest';
-        grid on;
-        xlabel("x")
-        ylabel("p")
 end
         
 %% Plot results: error on analytical soltion
@@ -555,41 +477,6 @@ if analytical
                 grid on
             end
         case 'odd-even-decoupling'
-            if ~strcmp(boundary_cond,'standard')
-                error("Boundary conditions must be set to standard for analytical solution")
-            else
-                Lx = xAxis(1); Ly = yAxis(2);
-                y0 = Ly/nCy/2; dy = Ly/nCy; yL = y0 + (nCy-1)*dy;
-                y = y0:dy:yL;
-                U_anal = @(y,dPx) -1/2*(Ly/2)^2/(nu*rho)*dPx*(1-(y/(Ly/2)).^2); %http://www.nar-associates.com/nar-publishing/lfachap2.pdf
-
-                figure
-                title(strcat('p_{in} = ', num2str(pIn), 'p_{out} = ', num2str(pOut)))
-                subplot(1,2,1)
-                hold on
-                ind0 = nCy*ceil(nCx/2)+1;
-                indices = ind0:(ind0+nCy-1);
-                leg = {};
-                [U,XX] = plotSection(casedef.dom.cCoord,result.U.data(1,:),indices,'y',2);
-                U_anal_y = U_anal(y-Ly/2,-pIn);
-                plot(U_anal_y,y,'--','LineWidth',1)
-                leg{1} = strcat('p_{in} = ', num2str(pIn), 'p_{out} = ', num2str(pOut));
-                leg{2} = "Analytic";
-                lgd = legend(leg);
-                lgd.Location = 'northeast';
-                grid on;
-                xlabel("U_x")
-                ylabel("y")
-                
-                subplot(1,2,2)
-                stem(y,U-U_anal_y)
-                leg2 = strcat('error');
-                lgd = legend(leg2);
-                grid on
-                xlabel("y")
-                ylabel("error")
-            end
-        case 'rie-chow'
             if ~strcmp(boundary_cond,'standard')
                 error("Boundary conditions must be set to standard for analytical solution")
             else

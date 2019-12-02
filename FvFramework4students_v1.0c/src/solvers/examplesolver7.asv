@@ -221,15 +221,15 @@ while stepping % Loop for (false) time stepping
     x = [Au\bu,Av\bv];
     set(U,x'); 
     
-    figure(1)
-    subplot(2,2,1)
-    title("U_{1,start}")
-    colorbar
-    fvmplotfield(U,'linear',1,1); 
-    subplot(2,2,2)
-    title("U_{2,start}")
-    colorbar
-    fvmplotfield(U,'linear',1,2); 
+%     figure(1)
+%     subplot(2,2,1)
+%     title("U_{1,start}")
+%     colorbar
+%     fvmplotfield(U,'linear',1,1); 
+%     subplot(2,2,2)
+%     title("U_{2,start}")
+%     colorbar
+%     fvmplotfield(U,'linear',1,2); 
       
     %%%%% PART 2: PRESSURE EQUATION %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % Given the current iterate of the velocities field (u*,v*), compute
@@ -278,7 +278,7 @@ while stepping % Loop for (false) time stepping
        l = fXiLamba(i + nIf); Af = fArea(i + nIf); Xif = norm(Xi(:,i + nIf));
        U1 = U.data(:,nb1); U2 = U.data(:,nb2);
        Uf = l*U1 + (1-l)*U2;
-       Unf = dot(Uf,fNormal(:,i));
+       Unf = dot(Uf,fNormal(:,i + nIf));
        %fVol = l*cVol(nb1)+(1-l)*cVol(nb2); % cVol is not included for ghost cells, do not use fvol here!
        apuNb1 = apu(nb1); apvNb1 = apv(nb1);
           
@@ -357,20 +357,20 @@ while stepping % Loop for (false) time stepping
     % Given the pressure correction, adjust the current pressure and 
     % velocities
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    figure(2)
-    subplot(1,2,1)
-    title("P_{start}")
-    colorbar
-    fvmplotfield(P,'linear',1);  
+%     figure(2)
+%     subplot(1,2,1)
+%     title("P_{start}")
+%     colorbar
+%     fvmplotfield(P,'linear',1);  
     
     set(P,P.data + alpha*P_prime.data)
     Ucorr = 0*U.data;
     
-    figure(2)
-    subplot(1,2,2)
-    title("newP")
-    colorbar
-    fvmplotfield(P,'linear',1); 
+%     figure(2)
+%     subplot(1,2,2)
+%     title("newP")
+%     colorbar
+%     fvmplotfield(P,'linear',1); 
     
     for i = 1:nIf
         nb1 = fNbC(2*i-1); nb2 = fNbC(2*i);
@@ -395,14 +395,14 @@ while stepping % Loop for (false) time stepping
     
     for i = 1:nBf
         nb1 = fNbC(2*i-1 + 2*nIf); nb2 = fNbC(2*i + 2*nIf);
-        l = fXiLamba(i + nIf); Af = fArea(i + nIf); Xif = norm(Xi(:,i + nIf));
+        l = fXiLamba(i + nIf); Af = fArea(i + nIf); % Xif = norm(Xi(:,i + nIf));
         %fVol = l*cVol(nb1)+(1-l)*cVol(nb2); % Volume of the shifted control cell
         apuNb1 = apu(nb1); apvNb1 = apv(nb1); 
         P1 = P_prime.data(:,nb1); P2 = P_prime.data(:,nb2);
         Pf = l*P1 + (1-l)*P2;
         % Note: the first nIf/2 faces lie along y.
         % See paper collocated, question what about Af???
-        if i <= ceil(nIf/2) % Face along y
+        if i <= ceil(nBf/2) % Face along y
            dX = cCoord(1,nb2)-cCoord(1,nb1);           
            Ucorr(1,nb1) = Ucorr(1,nb1) - sign(dX)*Pf*Af/(rho*apuNb1);
            %Ucorr(1,nb2) = Ucorr(1,nb2) + Pf*Af/(rho*apuNb2);
@@ -430,28 +430,29 @@ while stepping % Loop for (false) time stepping
                         %phi_star_u = -(BC{j}.data.bcval_u*Xif - Ucorr(1,nb1));
                         %phi_star_u = Ucorr(1,nb1);
                         %Ucorr(1,nb2) = phi_star_u;
-                        Ucorr(1,nb2) = 
-                        phi_star_v = -(BC{j}.data.bcval_v*Xif - Ucorr(2,nb1));
+                        Ucorr(1,nb2) = Ucorr(1,nb1);
+                        %phi_star_v = -(BC{j}.data.bcval_v*Xif - Ucorr(2,nb1));
                         %phi_star_v = Ucorr(2,nb1);
-                        Ucorr(2,nb2) = phi_star_v;                                                
+                        %Ucorr(2,nb2) = phi_star_v;
+                        Ucorr(2,nb2) = Ucorr(2,nb1);
                 end
             end
         end     
     end
     
-    set(U,Ucorr);
+    set(U,U.data + Ucorr);
     
-    figure(1)
-    subplot(2,2,3)
-    title("U_{1,corrected}")
-    colorbar
-    fvmplotfield(U,'linear',1,1); 
-    subplot(2,2,4)
-    title("U_{2,corrected}")
-    colorbar
-    fvmplotfield(U,'linear',1,2); 
+%     figure(1)
+%     subplot(2,2,3)
+%     title("U_{1,corrected}")
+%     colorbar
+%     fvmplotfield(U,'linear',1,1); 
+%     subplot(2,2,4)
+%     title("U_{2,corrected}")
+%     colorbar
+%     fvmplotfield(U,'linear',1,2); 
      
-    if (max(max(norm(U.data(1,:)-U_old.data(1,:)),norm(U.data(2,:)-U_old.data(2,:))),norm(P_prime.data)) < casedef.iteration.tol) || (time/dt >= maxNbTimeSteps)
+    if stoppingCriterion(Ucorr(1,:),Ucorr(2,:),P_prime.data,casedef.iteration.tol) || (time/dt >= maxNbTimeSteps)
         stepping = false;
         if time/dt >= maxNbTimeSteps
             disp("maximum number of time steps reached")
