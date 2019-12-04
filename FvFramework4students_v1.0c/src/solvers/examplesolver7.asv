@@ -227,15 +227,15 @@ while stepping % Loop for (false) time stepping
     x = [Au\bu,Av\bv];
     set(U,x'); 
     
-%     figure(1)
-%     subplot(2,2,1)
-%     title("U_{1,start}")
-%     colorbar
-%     fvmplotfield(U,'linear',1,1); 
-%     subplot(2,2,2)
-%     title("U_{2,start}")
-%     colorbar
-%     fvmplotfield(U,'linear',1,2); 
+    figure(1)
+    subplot(2,2,1)
+    title("U_{1,start}")
+    colorbar
+    fvmplotfield(U,'linear',1,1); 
+    subplot(2,2,2)
+    title("U_{2,start}")
+    colorbar
+    fvmplotfield(U,'linear',1,2); 
       
     %%%%% PART 2: PRESSURE EQUATION %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % Given the current iterate of the velocities field (u*,v*), compute
@@ -277,7 +277,7 @@ while stepping % Loop for (false) time stepping
           aNbIntp(2*i) = aNbIntp(2*i) - fVol*Af/(rho*dX*apuf); % Lower diagonal
        else % Face along x
           dY = cCoord(2,nb2)-cCoord(2,nb1);
-          dPy = (P2-P1)/dY;
+          dPy = (P2-P1)/dX;
           dPy_ = -(l*bv_dP(nb1) + (1-l)*bv_dP(nb2));
           U1 = U.data(:,nb1); U2 = U.data(:,nb2);
           Uf_ = l*U1(2) + (1-l)*U2(2); % Linear interpolation
@@ -293,119 +293,20 @@ while stepping % Loop for (false) time stepping
        end
     end  
 
-%     for i = 1:nBf % Loop over boundary faces
-%        nb1 = fNbC(2*i-1 + 2*nIf); nb2 = fNbC(2*i + 2*nIf);
-%        l = fXiLamba(i + nIf); Af = fArea(i + nIf); Xif = norm(Xi(:,i + nIf));
-%        %U1 = U.data(:,nb1); U2 = U.data(:,nb2);
-%        %Uf = l*U1 + (1-l)*U2;
-%        %Unf = dot(Uf,fNormal(:,i + nIf));
-%        %fVol = l*cVol(nb1)+(1-l)*cVol(nb2); % cVol is not included for ghost cells, do not use fvol here!
-%        %fVol = Xif*Af; % cVol(nb1)%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%        apuNb1 = apu(nb1); apvNb1 = apv(nb1);
-%           
-%        %bp(nb1) = bp(nb1) - Unf*Af; % - because term brought to RHS
-%        
-%        P1 = P.data(:,nb1); P2 = P.data(:,nb2);
-%        %Pf = l*P1 + (1-l)*P2;
-%           
-%        boundaryFound = 0;
-%        for j = 1:nbZones
-%          % Determine to which boundary the face belongs
-%          if ismember(i + nIf,ranges(1,j):ranges(2,j)) && boundaryFound == 0
-%              boundaryFound = 1;
-%              switch BC{j}.kind_p
-%                  case 'Dirichlet' 
-%                      % Note: the first nBf/2 faces lie along y. Note that 
-%                      % dX and dY may become negative depending on the
-%                      % boundary.                       
-%                      if i <= ceil(nBf/2) % Face along y
-%                         dX = cCoord(1,nb2)-cCoord(1,nb1);
-%                         dPx = (P2-P1)/dX;
-%                         dPx_ = -bu_dP(nb1);
-%                         U1 = U.data(:,nb1); U2 = U.data(:,nb2);
-%                         Uf_ = l*U1(1) + (1-l)*U2(1); % Linear interpolation
-%                         Uf = Uf_ ;%- fVol*(1/apuNb1)*(dPx-dPx_) ; %Rie-Chow interpolation
-%                         %Unf = dot(Uf,fNormal(:,i));
-%                         Unf = Uf;
-%                         bp(nb1) = bp(nb1) - Unf*Af; % - because term brought to RHS
-%                          
-%                         app(nb1) = app(nb1) + Af*Af/(rho*apuNb1); % sign flip
-%                         aNbBoundp(2*i-1) = aNbBoundp(2*i-1) - Af*Af/(rho*apuNb1); % sign flip
-%                      else % Face along x
-%                         dY = cCoord(2,nb2)-cCoord(2,nb1);
-%                         
-%                         dPy = (P2-P1)/dY;
-%                         dPy_ = -bv_dP(nb1);
-%                         U1 = U.data(:,nb1); U2 = U.data(:,nb2);
-%                         Uf_ = l*U1(2) + (1-l)*U2(2); % Linear interpolation
-%                         Uf = Uf_ ;%- fVol*(1/apvNb1)*(dPy-dPy_) ; %Rie-Chow interpolation
-%                         %Unf = dot(Uf,fNormal(:,i));
-%                         Unf = Uf;
-%                         bp(nb1) = bp(nb1) - Unf*Af; % - because term brought to RHS
-%                         
-%                         app(nb1) = app(nb1) + Af*Af/(rho*apvNb1); 
-%                         aNbBoundp(2*i-1) = aNbBoundp(2*i-1) - Af*Af/(rho*apvNb1);
-%                      end
-%                      app(nb2) = l;
-%                      aNbBoundp(2*i) = 1-l; % Lower diagonal
-%                       
-%                      % Forcing terms
-%                      % Note: the boundary condition must be imposed for p',
-%                      % and p = p' + p*, so the value for the boundary
-%                      % condition is actually p' = p - p*
-%                      p_star = l*P.data(nb1) + (1-l)*P.data(nb2);
-%                      phi_star = BC{j}.data.bcval_p - p_star;
-%                      bp(nb2) = phi_star;
-%                       
-%                  case 'Neumann'
-%                      if i <= ceil(nBf/2) % Face along y
-%                         dX = cCoord(1,nb2)-cCoord(1,nb1);
-%                         dPx = (P2-P1)/dX;
-%                         dPx_ = -bu_dP(nb1);
-%                         U1 = U.data(:,nb1); U2 = U.data(:,nb2);
-%                         Uf_ = l*U1(1) + (1-l)*U2(1); % Linear interpolation
-%                         Uf = Uf_ ;%- fVol*(1/apuNb1)*(dPx-dPx_) ; %Rie-Chow interpolation
-%                         %Unf = dot(Uf,fNormal(:,i));
-%                         Unf = Uf;
-%                         bp(nb1) = bp(nb1) - Unf*Af; % - because term brought to RHS
-%                          
-%                         app(nb1) = app(nb1) + Af*Af/(rho*apuNb1); 
-%                         aNbBoundp(2*i-1) = aNbBoundp(2*i-1) - Af*Af/(rho*apuNb1);
-%                      else % Face along x
-%                         dY = cCoord(2,nb2)-cCoord(2,nb1);
-%                         
-%                         dPy = (P2-P1)/dY;
-%                         dPy_ = -bv_dP(nb1);
-%                         U1 = U.data(:,nb1); U2 = U.data(:,nb2);
-%                         Uf_ = l*U1(2) + (1-l)*U2(2); % Linear interpolation
-%                         Uf = Uf_ ; %- fVol*(1/apvNb1)*(dPy-dPy_) ; %Rie-Chow interpolation
-%                         %Unf = dot(Uf,fNormal(:,i));
-%                         Unf = Uf;
-%                         bp(nb1) = bp(nb1) - Unf*Af; % - because term brought to RHS
-%                         app(nb1) = app(nb1) + Af*Af/(rho*apvNb1); 
-%                         aNbBoundp(2*i-1) = aNbBoundp(2*i-1) - Af*Af/(rho*apvNb1);
-%                      end
-%                      app(nb2) = -1/Xif;
-%                      aNbBoundp(2*i) = 1/Xif;   
-%                       
-%                      % Forcing terms
-%                      phi_star = BC{j}.data.bcval_p - (P.data(nb1) - P.data(nb2))/Xif;
-%                      bp(nb2) = phi_star;                                              
-%              end
-%          end
-%        end
-%     end
-
     for i = 1:nBf % Loop over boundary faces
        nb1 = fNbC(2*i-1 + 2*nIf); nb2 = fNbC(2*i + 2*nIf);
        l = fXiLamba(i + nIf); Af = fArea(i + nIf); Xif = norm(Xi(:,i + nIf));
-       U1 = U.data(:,nb1); U2 = U.data(:,nb2);
-       Uf = l*U1 + (1-l)*U2;
-       Unf = dot(Uf,fNormal(:,i + nIf));
+       %U1 = U.data(:,nb1); U2 = U.data(:,nb2);
+       %Uf = l*U1 + (1-l)*U2;
+       %Unf = dot(Uf,fNormal(:,i + nIf));
        %fVol = l*cVol(nb1)+(1-l)*cVol(nb2); % cVol is not included for ghost cells, do not use fvol here!
+       fVol = cVol(nb1); %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
        apuNb1 = apu(nb1); apvNb1 = apv(nb1);
           
-       bp(nb1) = bp(nb1) - Unf*Af; % - because term brought to RHS
+       %bp(nb1) = bp(nb1) - Unf*Af; % - because term brought to RHS
+       
+       P1 = P.data(:,nb1); P2 = P.data(:,nb2);
+       %Pf = l*P1 + (1-l)*P2;
           
        boundaryFound = 0;
        for j = 1:nbZones
@@ -418,11 +319,30 @@ while stepping % Loop for (false) time stepping
                      % dX and dY may become negative depending on the
                      % boundary.                       
                      if i <= ceil(nBf/2) % Face along y
-                        %dX = abs(cCoord(1,nb2)-cCoord(1,nb1));
+                        dX = cCoord(1,nb2)-cCoord(1,nb1);
+                        dPx = (P2-P1)/dX;
+                        dPx_ = -bu_dP(nb1);
+                        U1 = U.data(:,nb1); U2 = U.data(:,nb2);
+                        Uf_ = l*U1(1) + (1-l)*U2(1); % Linear interpolation
+                        Uf = Uf_ - fVol*(1/apuNb1)*(dPx-dPx_) ; %Rie-Chow interpolation
+                        %Unf = dot(Uf,fNormal(:,i));
+                        Unf = Uf;
+                        bp(nb1) = bp(nb1) - Unf*Af; % - because term brought to RHS
+                         
                         app(nb1) = app(nb1) + Af*Af/(rho*apuNb1); % sign flip
                         aNbBoundp(2*i-1) = aNbBoundp(2*i-1) - Af*Af/(rho*apuNb1); % sign flip
                      else % Face along x
-                        %dY = abs(cCoord(2,nb2)-cCoord(2,nb1));
+                        dY = cCoord(2,nb2)-cCoord(2,nb1);
+                        
+                        dPy = (P2-P1)/dY;
+                        dPy_ = -bv_dP(nb1);
+                        U1 = U.data(:,nb1); U2 = U.data(:,nb2);
+                        Uf_ = l*U1(2) + (1-l)*U2(2); % Linear interpolation
+                        Uf = Uf_ - fVol*(1/apvNb1)*(dPy-dPy_) ; %Rie-Chow interpolation
+                        %Unf = dot(Uf,fNormal(:,i));
+                        Unf = Uf;
+                        bp(nb1) = bp(nb1) - Unf*Af; % - because term brought to RHS
+                        
                         app(nb1) = app(nb1) + Af*Af/(rho*apvNb1); 
                         aNbBoundp(2*i-1) = aNbBoundp(2*i-1) - Af*Af/(rho*apvNb1);
                      end
@@ -438,15 +358,30 @@ while stepping % Loop for (false) time stepping
                      bp(nb2) = phi_star;
                       
                  case 'Neumann'
-                     % Note: the first nBf/2 faces lie along y. Note that 
-                     % dX and dY may become negative depending on the 
-                     % boundary.
                      if i <= ceil(nBf/2) % Face along y
-                        dX = abs(cCoord(1,nb2)-cCoord(1,nb1));
+                        dX = cCoord(1,nb2)-cCoord(1,nb1);
+                        dPx = (P2-P1)/dX;
+                        dPx_ = -bu_dP(nb1);
+                        U1 = U.data(:,nb1); U2 = U.data(:,nb2);
+                        Uf_ = l*U1(1) + (1-l)*U2(1); % Linear interpolation
+                        Uf = Uf_ ;%- fVol*(1/apuNb1)*(dPx-dPx_) ; %Rie-Chow interpolation
+                        %Unf = dot(Uf,fNormal(:,i));
+                        Unf = Uf;
+                        bp(nb1) = bp(nb1) - Unf*Af; % - because term brought to RHS
+                         
                         app(nb1) = app(nb1) + Af*Af/(rho*apuNb1); 
                         aNbBoundp(2*i-1) = aNbBoundp(2*i-1) - Af*Af/(rho*apuNb1);
                      else % Face along x
-                        dY = abs(cCoord(2,nb2)-cCoord(2,nb1));
+                        dY = cCoord(2,nb2)-cCoord(2,nb1);
+                        
+                        dPy = (P2-P1)/dY;
+                        dPy_ = -bv_dP(nb1);
+                        U1 = U.data(:,nb1); U2 = U.data(:,nb2);
+                        Uf_ = l*U1(2) + (1-l)*U2(2); % Linear interpolation
+                        Uf = Uf_ ; %- fVol*(1/apvNb1)*(dPy-dPy_) ; %Rie-Chow interpolation
+                        %Unf = dot(Uf,fNormal(:,i));
+                        Unf = Uf;
+                        bp(nb1) = bp(nb1) - Unf*Af; % - because term brought to RHS
                         app(nb1) = app(nb1) + Af*Af/(rho*apvNb1); 
                         aNbBoundp(2*i-1) = aNbBoundp(2*i-1) - Af*Af/(rho*apvNb1);
                      end
@@ -460,7 +395,6 @@ while stepping % Loop for (false) time stepping
          end
        end
     end
-     
        
     % Constitute matrices for the sparse solvers
     eqn_p.adata = [app ; aNbIntp ; aNbBoundp]; eqn_p.bdata = bp;
@@ -481,20 +415,20 @@ while stepping % Loop for (false) time stepping
     % Given the pressure correction, adjust the current pressure and 
     % velocities
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%     figure(2)
-%     subplot(1,2,1)
-%     title("P_{start}")
-%     colorbar
-%     fvmplotfield(P,'linear',1);  
+    figure(2)
+    subplot(1,2,1)
+    title("P_{start}")
+    colorbar
+    fvmplotfield(P,'linear',1);  
     
     set(P,P.data + alpha*P_prime.data)
     Ucorr = 0*U.data;
     
-%     figure(2)
-%     subplot(1,2,2)
-%     title("newP")
-%     colorbar
-%     fvmplotfield(P,'linear',1); 
+    figure(2)
+    subplot(1,2,2)
+    title("newP")
+    colorbar
+    fvmplotfield(P,'linear',1); 
     
     for i = 1:nIf
         nb1 = fNbC(2*i-1); nb2 = fNbC(2*i);
@@ -566,15 +500,15 @@ while stepping % Loop for (false) time stepping
     
     set(U,U.data + Ucorr);
     
-%     figure(1)
-%     subplot(2,2,3)
-%     title("U_{1,corrected}")
-%     colorbar
-%     fvmplotfield(U,'linear',1,1); 
-%     subplot(2,2,4)
-%     title("U_{2,corrected}")
-%     colorbar
-%     fvmplotfield(U,'linear',1,2); 
+    figure(1)
+    subplot(2,2,3)
+    title("U_{1,corrected}")
+    colorbar
+    fvmplotfield(U,'linear',1,1); 
+    subplot(2,2,4)
+    title("U_{2,corrected}")
+    colorbar
+    fvmplotfield(U,'linear',1,2); 
      
     if stoppingCriterion(Ucorr(1,:),Ucorr(2,:),P_prime.data,casedef.iteration.tol) || (time/dt >= maxNbTimeSteps)
         stepping = false;
